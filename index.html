@@ -30,7 +30,20 @@ const WORKER = "https://cricbuzz.namanmehra.workers.dev";
 
 async function api(path) {
     const r = await fetch(`${WORKER}?endpoint=${encodeURIComponent(path)}`);
-    return await r.json();
+    const text = await r.text();
+
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        throw new Error("Non-JSON response: " + text.slice(0, 120));
+    }
+
+    if (!r.ok) {
+        throw new Error(data.error || data.message || `HTTP ${r.status}`);
+    }
+
+    return data;
 }
 
 async function start() {
@@ -39,43 +52,77 @@ async function start() {
         document.getElementById("status").innerText = "Click a match below:";
         
         let matches = [];
-        data.typeMatches.forEach(t => t.seriesMatches?.forEach(s => s.seriesAdWrapper?.matches?.forEach(m => matches.push(m.matchInfo))));
-        
+        data.typeMatches?.forEach(t => 
+            t.seriesMatches?.forEach(s => 
+                s.seriesAdWrapper?.matches?.forEach(m => 
+                    matches.push(m.matchInfo)
+                )
+            )
+        );
+
+        if (!matches.length) {
+            document.getElementById("status").innerText = "No live matches found.";
+            return;
+        }
+
         document.getElementById("matchButtons").innerHTML = matches.map(m => 
             `<button class="match-btn" onclick="showScore(${m.matchId})">${m.team1.teamName} vs ${m.team2.teamName}</button>`
         ).join('');
     } catch (e) {
-        document.getElementById("status").innerText = "Connection Error! Check Cloudflare logs.";
+        console.error(e);
+        document.getElementById("status").innerText = "Connection Error: " + e.message;
     }
 }
 
 async function showScore(id) {
     document.getElementById("status").innerText = "Loading Scorecard...";
     try {
-        const data = await api(`/mcenter/v1/${id}/hscard`);
-        document.getElementById("scorecardArea").style.display = "block";
-        document.getElementById("mName").innerText = data.matchHeader.matchDescription;
+        let data;
 
-        // Force select the first available scorecard entry
+        try {
+            data = await api(`/mcenter/v1/${id}/hscard`);
+        } catch {
+            data = await api(`/mcenter/v1/${id}/scard`);
+        }
+
+        if (!data || !data.scoreCard || !data.scoreCard.length) {
+            throw new Error("No scorecard returned for this match.");
+        }
+
+        document.getElementById("scorecardArea").style.display = "block";
+        document.getElementById("mName").innerText =
+            data.matchHeader?.matchDescription ||
+            `${data.matchHeader?.team1?.name || "Team 1"} vs ${data.matchHeader?.team2?.name || "Team 2"}`;
+
         const inn = data.scoreCard[0];
 
-        // Fill Batting
         let bat = `<tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr>`;
-        Object.values(inn.batTeamDetails.batsmenData).forEach(p => {
-            bat += `<tr><td>${p.batName}</td><td>${p.runs}</td><td>${p.balls}</td></tr>`;
+        const batsmen = inn?.batTeamDetails?.batsmenData || {};
+        Object.values(batsmen).forEach(p => {
+            bat += `<tr><td>${p.batName || ""}</td><td>${p.runs ?? ""}</td><td>${p.balls ?? ""}</td></tr>`;
         });
+        if (!Object.keys(batsmen).length) {
+            bat += `<tr><td colspan="3">No batting data available.</td></tr>`;
+        }
         document.getElementById("batTable").innerHTML = bat;
 
-        // Fill Bowling
         let bowl = `<tr><th>Bowler</th><th>Overs</th><th>Wickets</th><th>Dots</th></tr>`;
-        Object.values(inn.bowTeamDetails.bowlersData).forEach(b => {
-            bowl += `<tr><td>${b.bowlerName}</td><td>${b.overs}</td><td>${b.wickets}</td><td>${b.dots || 0}</td></tr>`;
+        const bowlers =
+            inn?.bowlTeamDetails?.bowlersData ||
+            inn?.bowTeamDetails?.bowlersData ||
+            {};
+        Object.values(bowlers).forEach(b => {
+            bowl += `<tr><td>${b.bowlerName || b.bowlName || ""}</td><td>${b.overs ?? ""}</td><td>${b.wickets ?? ""}</td><td>${b.dots || 0}</td></tr>`;
         });
+        if (!Object.keys(bowlers).length) {
+            bowl += `<tr><td colspan="4">No bowling data available.</td></tr>`;
+        }
         document.getElementById("bowlTable").innerHTML = bowl;
 
         document.getElementById("status").innerText = "Done.";
     } catch (e) {
-        document.getElementById("status").innerText = "Scorecard Data Missing for this match.";
+        console.error(e);
+        document.getElementById("status").innerText = "Scorecard Error: " + e.message;
     }
 }
 
