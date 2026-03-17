@@ -1,319 +1,134 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🏏 IPL Analytics Dashboard</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-
-<style>
-
-:root{
---gold:#D4A847;
---bg:#07090F;
---bg2:#0C1018;
---txt:#EDE9E0;
---border:rgba(255,255,255,0.1);
---ok:#10B981;
---err:#EF4444;
-}
-
-body{
-font-family:'DM Sans',sans-serif;
-background:var(--bg);
-color:var(--txt);
-margin:0;
-padding:30px;
-}
-
-.container{
-max-width:1200px;
-margin:auto;
-}
-
-h1,h2,h3{
-font-family:'Bebas Neue';
-color:var(--gold);
-letter-spacing:1px;
-}
-
-.card{
-background:var(--bg2);
-border:1px solid var(--border);
-border-radius:12px;
-padding:25px;
-margin-bottom:20px;
-}
-
-.grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:20px;
-}
-
-.btn{
-background:var(--gold);
-color:#000;
-padding:10px 20px;
-border-radius:6px;
-border:none;
-font-weight:bold;
-cursor:pointer;
-}
-
-select{
-padding:10px;
-background:#111;
-color:#fff;
-border:1px solid var(--border);
-border-radius:6px;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-
-th{
-text-align:left;
-font-size:0.75rem;
-text-transform:uppercase;
-border-bottom:2px solid var(--border);
-padding:10px;
-color:var(--gold);
-}
-
-td{
-padding:10px;
-border-bottom:1px solid var(--border);
-font-size:0.9rem;
-}
-
-pre{
-background:#000;
-padding:15px;
-border-radius:8px;
-overflow:auto;
-max-height:350px;
-color:#10B981;
-font-size:11px;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h1>🏏 IPL Match Analytics Dashboard</h1>
-
-<div class="card">
-
-<h3>Select Match</h3>
-
-<select id="matchSelector"></select>
-<button class="btn" onclick="loadMatch()">Load Scorecard</button>
-
-<div id="status"></div>
-
-</div>
-
-<div id="results" style="display:none">
-
-<div class="grid">
-
-<div class="card">
-<h3>Match Info</h3>
-<div id="summary"></div>
-</div>
-
-<div class="card">
-<h3>Scoring Info</h3>
-<div id="meta"></div>
-</div>
-
-</div>
-
-<div class="card">
-
-<h3>Batting Scorecard</h3>
-
-<table id="batTable">
-<thead>
-<tr>
-<th>Batsman</th>
-<th>Runs</th>
-<th>Balls</th>
-<th>4s</th>
-<th>6s</th>
-<th>Strike Rate</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
-</div>
-
-<div class="card">
-
-<h3>Bowling Scorecard</h3>
-
-<table id="bowlTable">
-<thead>
-<tr>
-<th>Bowler</th>
-<th>Overs</th>
-<th>Maidens</th>
-<th>Runs</th>
-<th>Wickets</th>
-<th>Dots</th>
-<th>Econ</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
-</div>
-
-<div class="card">
-<h3>Raw JSON Inspector</h3>
-<pre id="raw"></pre>
-</div>
-
-</div>
-
-</div>
-
 <script>
+const API_KEY = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095";
+const API_HOST = "cricbuzz-cricket.p.rapidapi.com";
 
-const API_KEY="6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"
-const API_HOST="cricbuzz-cricket.p.rapidapi.com"
+async function loadMatches() {
+  const status = document.getElementById("status");
+  const selector = document.getElementById("matchSelector");
 
-async function loadMatches(){
+  try {
+    status.innerHTML = "Loading recent matches...";
 
-const status=document.getElementById("status")
+    const res = await fetch("https://cricbuzz-cricket.p.rapidapi.com/matches/v1/recent", {
+      headers: {
+        "x-rapidapi-key": API_KEY,
+        "x-rapidapi-host": API_HOST
+      }
+    });
 
-status.innerHTML="Loading recent matches..."
+    const data = await res.json();
+    selector.innerHTML = "";
 
-const res=await fetch("https://cricbuzz-cricket.p.rapidapi.com/matches/v1/recent",{
-headers:{
-"x-rapidapi-key":API_KEY,
-"x-rapidapi-host":API_HOST
-}
-})
+    (data.typeMatches || []).forEach(type => {
+      (type.seriesMatches || []).forEach(series => {
+        const matches = series.seriesAdWrapper?.matches || [];
+        matches.forEach(match => {
+          const info = match.matchInfo || {};
+          const team1 = info.team1?.teamName || "Team 1";
+          const team2 = info.team2?.teamName || "Team 2";
+          const matchId = info.matchId;
 
-const data=await res.json()
+          if (!matchId) return;
 
-const selector=document.getElementById("matchSelector")
-selector.innerHTML=""
+          const option = document.createElement("option");
+          option.value = matchId;
+          option.textContent = `${team1} vs ${team2}`;
+          selector.appendChild(option);
+        });
+      });
+    });
 
-data.typeMatches.forEach(type=>{
-type.seriesMatches.forEach(series=>{
-series.seriesAdWrapper.matches.forEach(match=>{
-
-const option=document.createElement("option")
-
-option.value=match.matchInfo.matchId
-option.text=
-match.matchInfo.team1.teamName+
-" vs "+
-match.matchInfo.team2.teamName
-
-selector.appendChild(option)
-
-})
-})
-})
-
-status.innerHTML="Matches loaded"
-
-}
-
-async function loadMatch(){
-
-const matchId=document.getElementById("matchSelector").value
-const status=document.getElementById("status")
-
-status.innerHTML="Fetching scorecard..."
-
-const res=await fetch(
-`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`,
-{
-headers:{
-"x-rapidapi-key":API_KEY,
-"x-rapidapi-host":API_HOST
-}
-})
-
-const data=await res.json()
-
-document.getElementById("results").style.display="block"
-
-document.getElementById("raw").textContent=JSON.stringify(data,null,2)
-
-const header=data.matchHeader
-
-document.getElementById("summary").innerHTML=`
-<p><b>Match:</b> ${header.matchDescription}</p>
-<p><b>Venue:</b> ${header.venue.name}, ${header.venue.city}</p>
-<p><b>Status:</b> ${header.status}</p>
-`
-
-document.getElementById("meta").innerHTML=`
-<p><b>Format:</b> ${header.matchFormat}</p>
-<p><b>Series:</b> ${header.seriesName}</p>
-<p><b>State:</b> ${header.state}</p>
-`
-
-const batBody=document.querySelector("#batTable tbody")
-batBody.innerHTML=""
-
-Object.values(data.scoreCard[0].batTeamDetails.batsmenData).forEach(b=>{
-
-batBody.innerHTML+=`
-<tr>
-<td>${b.batName}</td>
-<td>${b.runs}</td>
-<td>${b.balls}</td>
-<td>${b.fours}</td>
-<td>${b.sixes}</td>
-<td>${b.strikeRate}</td>
-<td>${b.outDesc}</td>
-</tr>
-`
-
-})
-
-const bowlBody=document.querySelector("#bowlTable tbody")
-bowlBody.innerHTML=""
-
-Object.values(data.scoreCard[0].bowTeamDetails.bowlersData).forEach(b=>{
-
-bowlBody.innerHTML+=`
-<tr>
-<td>${b.bowlerName}</td>
-<td>${b.overs}</td>
-<td>${b.maidens}</td>
-<td>${b.runs}</td>
-<td>${b.wickets}</td>
-<td>${b.dots||0}</td>
-<td>${b.economy}</td>
-</tr>
-`
-
-})
-
-status.innerHTML="Scorecard loaded"
-
+    status.innerHTML = "Matches loaded";
+  } catch (err) {
+    console.error(err);
+    status.innerHTML = `Error loading matches: ${err.message}`;
+  }
 }
 
-loadMatches()
+async function loadMatch() {
+  const matchId = document.getElementById("matchSelector").value;
+  const status = document.getElementById("status");
 
+  try {
+    status.innerHTML = "Fetching scorecard...";
+
+    const res = await fetch(
+      `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`,
+      {
+        headers: {
+          "x-rapidapi-key": API_KEY,
+          "x-rapidapi-host": API_HOST
+        }
+      }
+    );
+
+    const data = await res.json();
+    console.log("Full response:", data);
+
+    document.getElementById("results").style.display = "block";
+    document.getElementById("raw").textContent = JSON.stringify(data, null, 2);
+
+    const header = data.matchHeader || {};
+    const venue = header.venue || {};
+
+    document.getElementById("summary").innerHTML = `
+      <p><b>Match:</b> ${header.matchDescription || "N/A"}</p>
+      <p><b>Venue:</b> ${venue.name || "N/A"}${venue.city ? ", " + venue.city : ""}</p>
+      <p><b>Status:</b> ${header.status || "N/A"}</p>
+      <p><b>Toss:</b> ${header.tossResults?.tossWinnerName || "N/A"}</p>
+    `;
+
+    document.getElementById("meta").innerHTML = `
+      <p><b>Format:</b> ${header.matchFormat || "N/A"}</p>
+      <p><b>Series:</b> ${header.seriesName || "N/A"}</p>
+      <p><b>State:</b> ${header.state || "N/A"}</p>
+      <p><b>Complete:</b> ${header.complete ? "Yes" : "No"}</p>
+    `;
+
+    const innings = data.scoreCard?.[0] || {};
+    const batsmen = innings.batsman || [];
+    const bowlers = innings.bowler || [];
+
+    const batBody = document.querySelector("#batTable tbody");
+    batBody.innerHTML = "";
+
+    batsmen.forEach(b => {
+      batBody.innerHTML += `
+        <tr>
+          <td>${b.name || "-"}</td>
+          <td>${b.runs ?? "-"}</td>
+          <td>${b.balls ?? "-"}</td>
+          <td>${b.fours ?? "-"}</td>
+          <td>${b.sixes ?? "-"}</td>
+          <td>${b.strikeRate ?? "-"}</td>
+          <td>${b.outdec || "not out"}</td>
+        </tr>
+      `;
+    });
+
+    const bowlBody = document.querySelector("#bowlTable tbody");
+    bowlBody.innerHTML = "";
+
+    bowlers.forEach(b => {
+      bowlBody.innerHTML += `
+        <tr>
+          <td>${b.name || "-"}</td>
+          <td>${b.overs ?? "-"}</td>
+          <td>${b.maidens ?? "-"}</td>
+          <td>${b.runs ?? "-"}</td>
+          <td>${b.wickets ?? "-"}</td>
+          <td>${b.dots ?? "-"}</td>
+          <td>${b.economy ?? "-"}</td>
+        </tr>
+      `;
+    });
+
+    status.innerHTML = "Scorecard loaded";
+  } catch (err) {
+    console.error(err);
+    status.innerHTML = `Error loading scorecard: ${err.message}`;
+  }
+}
+
+loadMatches();
 </script>
-
-</body>
-</html>
