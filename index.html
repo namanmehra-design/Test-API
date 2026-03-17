@@ -1,133 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>IPL 2025: MI vs CSK Scorecard</title>
-    <style>
-        :root { --gold: #D4A847; --bg: #07090F; --bg2: #0C1018; --txt: #EDE9E0; --bdr: rgba(255,255,255,0.1); }
-        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--txt); padding: 20px; }
-        .match-card { background: var(--bg2); border: 1px solid var(--bdr); border-radius: 12px; padding: 25px; max-width: 900px; margin: 0 auto; }
-        h2, h3 { color: var(--gold); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
-        .btn-fetch { background: var(--gold); border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th { text-align: left; color: var(--gold); border-bottom: 2px solid var(--bdr); padding: 10px; font-size: 0.8rem; text-transform: uppercase; }
-        td { padding: 10px; border-bottom: 1px solid var(--bdr); font-size: 0.9rem; }
-        .out-desc { color: #888; font-style: italic; font-size: 0.8rem; }
-        #status { margin-bottom: 15px; font-size: 0.85rem; padding: 10px; border-radius: 4px; }
-        .error-box { background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; padding: 10px; }
-    </style>
-</head>
-<body>
-
-<div class="match-card">
-    <h2>IPL 2025: MI vs CSK (Match ID: 104367)</h2>
-    <button class="btn-fetch" onclick="fetchIPLData()">Load Match 38 Scorecard</button>
-    <div id="status">Ready.</div>
-
-    <div id="data-tables" style="display:none;">
-        <h3>🏏 Batting Performance</h3>
-        <table id="battingTable">
-            <thead>
-                <tr>
-                    <th>Batsman</th>
-                    <th>Runs</th>
-                    <th>Balls</th>
-                    <th>4s</th>
-                    <th>6s</th>
-                    <th>S/R</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-
-        <h3> bowling 🎳 Bowling Performance</h3>
-        <table id="bowlingTable">
-            <thead>
-                <tr>
-                    <th>Bowler</th>
-                    <th>Overs</th>
-                    <th>Runs Conc.</th>
-                    <th>Wickets</th>
-                    <th>Economy</th>
-                    <th>Wides/NB</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-async function fetchIPLData() {
-    const matchId = "104367"; 
-    const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; 
-    const status = document.getElementById('status');
-    const tables = document.getElementById('data-tables');
-    
-    status.innerHTML = "⚡ <b>Fetching...</b>";
-    status.className = "";
-    tables.style.display = "none";
-
-    const options = {
-        method: 'GET',
-        headers: {
-            'x-rapidapi-key': apiKey,
-            'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com'
-        }
-    };
+async function inspectFullScorecard(matchId) {
+    const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095";
+    const url = `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`;
 
     try {
-        const response = await fetch(`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`, options);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com'
+            }
+        });
         
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
         const data = await response.json();
-
-        if (!data.scoreCard) throw new Error("Scorecard data not available for this Match ID.");
-
-        tables.style.display = 'block';
         
-        // --- Process Batting (CSK Innings) ---
-        const batBody = document.querySelector('#battingTable tbody');
-        batBody.innerHTML = '';
-        const batsmen = data.scoreCard[0].batTeamDetails.batsmenData;
-        Object.values(batsmen).forEach(b => {
-            batBody.innerHTML += `<tr>
-                <td><b>${b.batName}</b></td>
-                <td>${b.runs}</td>
-                <td>${b.balls}</td>
-                <td>${b.fours}</td>
-                <td>${b.sixes}</td>
-                <td>${b.strikeRate}</td>
-                <td class="out-desc">${b.outDesc}</td>
-            </tr>`;
-        });
-
-        // --- Process Bowling (MI Bowlers) ---
-        const bowlBody = document.querySelector('#bowlingTable tbody');
-        bowlBody.innerHTML = '';
-        const bowlers = data.scoreCard[0].bowTeamDetails.bowlersData;
-        Object.values(bowlers).forEach(bw => {
-            bowlBody.innerHTML += `<tr>
-                <td><b>${bw.bowlerName}</b></td>
-                <td>${bw.overs}</td>
-                <td>${bw.runs}</td>
-                <td>${bw.wickets}</td>
-                <td>${bw.economy}</td>
-                <td>${bw.wides}/${bw.no_balls}</td>
-            </tr>`;
-        });
-
-        status.innerHTML = "✅ <b>Success!</b> Data loaded.";
-        status.style.color = "#10B981";
-
+        console.log("--- FULL API RESPONSE OBJECT ---");
+        console.log(data); // Click the arrows in Console to expand every field
+        
+        // Specifically check the first batsman's keys
+        if (data.scoreCard && data.scoreCard[0]) {
+            const firstBat = Object.values(data.scoreCard[0].batTeamDetails.batsmenData)[0];
+            console.log("Available Batsman Fields:", Object.keys(firstBat));
+            
+            const firstBowl = Object.values(data.scoreCard[0].bowTeamDetails.bowlersData)[0];
+            console.log("Available Bowler Fields:", Object.keys(firstBowl));
+        }
     } catch (err) {
-        status.className = "error-box";
-        status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
-        console.error(err);
+        console.error("Fetch failed:", err);
     }
 }
-</script>
-</body>
-</html>
+
+// Run this in your browser console (F12 > Console)
+inspectFullScorecard("104367");
