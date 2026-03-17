@@ -38,11 +38,6 @@ th{
 background:#444;
 color:#ffc857;
 }
-
-.loading{
-color:#ffc857;
-font-weight:bold;
-}
 </style>
 </head>
 
@@ -50,12 +45,10 @@ font-weight:bold;
 
 <h2>🏏 Basic Scorecard Sync</h2>
 
-<div id="status">Fetching Match List...</div>
-
+<div id="status">Loading matches...</div>
 <div id="matchButtons"></div>
 
 <div id="scorecardArea" style="display:none;">
-
 <h3 id="mName"></h3>
 
 <h4>Batting</h4>
@@ -63,81 +56,53 @@ font-weight:bold;
 
 <h4>Bowling</h4>
 <table id="bowlTable"></table>
-
 </div>
 
 <script>
 
 const WORKER="https://cricbuzz.namanmehra.workers.dev";
 
-async function api(path){
+async function loadMatches(){
 
-const r=await fetch(`${WORKER}?endpoint=${encodeURIComponent(path)}`);
-return await r.json();
+try{
 
-}
-
-function flattenMatches(data){
+const r=await fetch(`${WORKER}/bundle/matches`);
+const data=await r.json();
 
 let matches=[];
 
-data.typeMatches?.forEach(t=>
+function flatten(obj){
+if(!obj?.data) return;
+obj.data.typeMatches?.forEach(t=>
 t.seriesMatches?.forEach(s=>
 s.seriesAdWrapper?.matches?.forEach(m=>
 matches.push(m.matchInfo)
 )
 )
 );
-
-return matches;
-
 }
 
-async function loadMatches(){
-
-try{
-
-let data=await api("/matches/v1/live");
-let matches=flattenMatches(data);
+flatten(data.live);
+flatten(data.upcoming);
+flatten(data.recent);
 
 if(matches.length===0){
-
-data=await api("/matches/v1/upcoming");
-matches=flattenMatches(data);
-
-}
-
-if(matches.length===0){
-
-data=await api("/matches/v1/recent");
-matches=flattenMatches(data);
-
-}
-
-if(matches.length===0){
-
-document.getElementById("status").innerText="No matches available.";
+document.getElementById("status").innerText="No matches returned from API.";
 return;
-
 }
 
-document.getElementById("status").innerText="Click a match below:";
+document.getElementById("status").innerText="Click a match:";
 
 document.getElementById("matchButtons").innerHTML=
-
 matches.map(m=>
-
 `<button class="match-btn" onclick="showScore(${m.matchId})">
-
 ${m.team1.teamName} vs ${m.team2.teamName}
-
 </button>`
-
 ).join('');
 
 }catch(e){
 
-document.getElementById("status").innerText="Connection Error";
+document.getElementById("status").innerText="Worker connection failed.";
 
 }
 
@@ -145,21 +110,12 @@ document.getElementById("status").innerText="Connection Error";
 
 async function showScore(id){
 
-document.getElementById("status").innerText="Loading Scorecard...";
+document.getElementById("status").innerText="Loading scorecard...";
 
 try{
 
-let data;
-
-try{
-
-data=await api(`/mcenter/v1/${id}/hscard`);
-
-}catch{
-
-data=await api(`/mcenter/v1/${id}/scard`);
-
-}
+const r=await fetch(`${WORKER}?endpoint=${encodeURIComponent(`/mcenter/v1/${id}/scard`)}`);
+const data=await r.json();
 
 document.getElementById("scorecardArea").style.display="block";
 
@@ -170,37 +126,23 @@ const inn=data.scoreCard[0];
 let bat=`<tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr>`;
 
 Object.values(inn.batTeamDetails.batsmenData).forEach(p=>{
-
 bat+=`<tr>
-
 <td>${p.batName}</td>
-
 <td>${p.runs}</td>
-
 <td>${p.balls}</td>
-
 </tr>`;
-
 });
 
 document.getElementById("batTable").innerHTML=bat;
 
-let bowl=`<tr><th>Bowler</th><th>Overs</th><th>Wickets</th><th>Dots</th></tr>`;
+let bowl=`<tr><th>Bowler</th><th>Overs</th><th>Wickets</th></tr>`;
 
 Object.values(inn.bowlTeamDetails.bowlersData).forEach(b=>{
-
 bowl+=`<tr>
-
 <td>${b.bowlerName}</td>
-
 <td>${b.overs}</td>
-
 <td>${b.wickets}</td>
-
-<td>${b.dots||0}</td>
-
 </tr>`;
-
 });
 
 document.getElementById("bowlTable").innerHTML=bowl;
@@ -209,7 +151,7 @@ document.getElementById("status").innerText="Done.";
 
 }catch(e){
 
-document.getElementById("status").innerText="Scorecard unavailable";
+document.getElementById("status").innerText="Scorecard unavailable.";
 
 }
 
