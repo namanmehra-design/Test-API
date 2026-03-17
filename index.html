@@ -1,821 +1,200 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CricViz Universal Dashboard</title>
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-  <style>
-    :root{
-      --bg:#08111f;
-      --panel:#0f1b2f;
-      --panel2:#14233d;
-      --line:#1f2d49;
-      --text:#eef2f7;
-      --muted:#9fb0c8;
-      --gold:#ffc857;
-      --green:#10b981;
-      --red:#ef4444;
-      --blue:#27406f;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:var(--bg);
-      color:var(--text);
-    }
-    header{
-      padding:20px 18px;
-      border-bottom:1px solid var(--line);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-    }
-    header .title{
-      font-size:22px;
-      font-weight:700;
-      color:var(--gold);
-    }
-    header .mini{
-      color:var(--muted);
-      font-size:13px;
-    }
-    .app{
-      display:flex;
-      min-height:calc(100vh - 72px);
-    }
-    .sidebar{
-      width:320px;
-      background:var(--panel);
-      border-right:1px solid var(--line);
-      overflow:auto;
-      flex-shrink:0;
-    }
-    .sidebar-top{
-      position:sticky;
-      top:0;
-      z-index:2;
-      background:var(--panel);
-      border-bottom:1px solid var(--line);
-      padding:14px;
-    }
-    .tab-row{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .tab-btn{
-      border:none;
-      background:#1a2948;
-      color:#fff;
-      padding:8px 12px;
-      border-radius:8px;
-      cursor:pointer;
-      font-weight:600;
-    }
-    .tab-btn.active{
-      background:var(--blue);
-      color:var(--gold);
-    }
-    .status{
-      margin-top:10px;
-      font-size:13px;
-      color:var(--muted);
-    }
-    .matches{padding:0}
-    .match{
-      padding:14px;
-      border-bottom:1px solid var(--line);
-      cursor:pointer;
-      transition:background .15s ease;
-    }
-    .match:hover{background:#182746}
-    .match.active{
-      background:#22365f;
-      outline:1px solid rgba(255,200,87,.35);
-    }
-    .match-title{
-      font-weight:700;
-      line-height:1.2;
-      margin-bottom:6px;
-    }
-    .match-sub{
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.25;
-    }
-    .main{
-      flex:1;
-      padding:22px;
-      overflow:auto;
-    }
-    .hero{
-      margin-bottom:18px;
-    }
-    .hero h2{
-      margin:0 0 6px 0;
-      font-size:20px;
-    }
-    .hero .sub{
-      color:var(--muted);
-      font-size:14px;
-    }
-    .grid{
-      display:grid;
-      gap:18px;
-    }
-    .grid-2{
-      grid-template-columns:repeat(2,minmax(0,1fr));
-    }
-    .grid-3{
-      grid-template-columns:repeat(3,minmax(0,1fr));
-    }
-    .card{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:16px;
-    }
-    .card h3{
-      margin:0 0 12px 0;
-      font-size:15px;
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:14px;
-    }
-    th,td{
-      padding:9px 8px;
-      border-bottom:1px solid var(--line);
-      text-align:left;
-      vertical-align:top;
-    }
-    th{
-      color:var(--gold);
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.04em;
-    }
-    .kpi{
-      background:var(--panel2);
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:14px;
-      text-align:center;
-    }
-    .kpi .label{
-      color:var(--muted);
-      font-size:13px;
-      margin-bottom:6px;
-    }
-    .kpi .value{
-      font-size:24px;
-      font-weight:700;
-      color:var(--gold);
-    }
-    .msg{
-      color:var(--muted);
-      font-size:14px;
-      padding:8px 0;
-    }
-    .badge{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      background:#1a2948;
-      color:var(--gold);
-      font-size:12px;
-      margin-right:6px;
-      margin-bottom:6px;
-    }
-    .section-switch{
-      display:flex;
-      gap:8px;
-      margin-bottom:18px;
-      flex-wrap:wrap;
-    }
-    .section-btn{
-      border:none;
-      background:#1a2948;
-      color:#fff;
-      padding:8px 12px;
-      border-radius:8px;
-      cursor:pointer;
-      font-weight:600;
-    }
-    .section-btn.active{
-      background:var(--blue);
-      color:var(--gold);
-    }
-    .pane{display:none}
-    .pane.active{display:block}
-    @media (max-width: 1100px){
-      .app{flex-direction:column}
-      .sidebar{width:100%;max-height:40vh}
-      .grid-2,.grid-3{grid-template-columns:1fr}
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Cricbuzz Scorecard Dashboard</title>
+
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+body{
+background:#08111f;
+color:white;
+font-family:Arial;
+margin:0;
+padding:30px;
+}
+
+h1{
+color:#ffc857;
+}
+
+.card{
+background:#0f1b2f;
+padding:20px;
+border-radius:10px;
+margin-bottom:20px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th,td{
+padding:8px;
+border-bottom:1px solid #1f2d49;
+}
+
+th{
+color:#ffc857;
+text-align:left;
+}
+
+#chart{
+height:350px;
+}
+</style>
 </head>
+
 <body>
-  <header>
-    <div class="title">🏏 CricViz Universal Dashboard</div>
-    <div id="topStatus" class="mini">Standby</div>
-  </header>
-
-  <div class="app">
-    <aside class="sidebar">
-      <div class="sidebar-top">
-        <div class="tab-row">
-          <button class="tab-btn active" data-feed="live">Live</button>
-          <button class="tab-btn" data-feed="upcoming">Upcoming</button>
-          <button class="tab-btn" data-feed="recent">Recent</button>
-        </div>
-        <div id="sidebarStatus" class="status">Loading bundled matches...</div>
-      </div>
-      <div id="matches" class="matches"></div>
-    </aside>
-
-    <main class="main">
-      <div class="section-switch">
-        <button class="section-btn active" data-pane="matchPane">Match</button>
-        <button class="section-btn" data-pane="seriesPane">Series</button>
-        <button class="section-btn" data-pane="teamPane">Team</button>
-        <button class="section-btn" data-pane="playerPane">Player</button>
-        <button class="section-btn" data-pane="rankingsPane">Rankings</button>
-        <button class="section-btn" data-pane="photosPane">Photos</button>
-      </div>
-
-      <section id="matchPane" class="pane active">
-        <div class="hero">
-          <h2 id="matchTitle">Select a match</h2>
-          <div id="matchSub" class="sub">This page now draws from multiple APIs, not one.</div>
-        </div>
-
-        <div class="grid">
-          <div class="card">
-            <h3>Match Meta</h3>
-            <div id="metaBadges"></div>
-          </div>
-
-          <div class="grid grid-3">
-            <div class="kpi">
-              <div class="label">Powerplay</div>
-              <div id="powerValue" class="value">-</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Middle</div>
-              <div id="middleValue" class="value">-</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Death</div>
-              <div id="deathValue" class="value">-</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3>Run Progression</h3>
-            <div id="wormChart" style="height:320px;"></div>
-          </div>
-
-          <div class="grid grid-2">
-            <div class="card">
-              <h3>Batting</h3>
-              <table id="batTable"></table>
-            </div>
-            <div class="card">
-              <h3>Bowling</h3>
-              <table id="bowlTable"></table>
-            </div>
-          </div>
-
-          <div class="grid grid-2">
-            <div class="card">
-              <h3>Leanback / Live Detail</h3>
-              <div id="leanbackBox" class="msg">No live detail loaded.</div>
-            </div>
-            <div class="card">
-              <h3>Team Detail</h3>
-              <div id="teamBox" class="msg">No team-specific detail loaded.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="seriesPane" class="pane">
-        <div class="hero">
-          <h2>Series</h2>
-          <div class="sub">Loads series list, detail, squads, venues, points table, and stats.</div>
-        </div>
-        <div class="card">
-          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <input id="seriesIdInput" placeholder="Series ID, e.g. 3718" style="padding:10px;border-radius:8px;border:1px solid var(--line);background:#13213a;color:white;">
-            <input id="squadIdInput" placeholder="Optional Squad ID" style="padding:10px;border-radius:8px;border:1px solid var(--line);background:#13213a;color:white;">
-            <button class="section-btn active" id="loadSeriesBtn">Load Series Bundle</button>
-          </div>
-          <pre id="seriesOutput" class="msg" style="white-space:pre-wrap;"></pre>
-        </div>
-      </section>
-
-      <section id="teamPane" class="pane">
-        <div class="hero">
-          <h2>Team</h2>
-          <div class="sub">Loads team schedules, results, players, and team stats.</div>
-        </div>
-        <div class="card">
-          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <input id="teamIdInput" placeholder="Team ID, e.g. 2" style="padding:10px;border-radius:8px;border:1px solid var(--line);background:#13213a;color:white;">
-            <button class="section-btn active" id="loadTeamBtn">Load Team Bundle</button>
-          </div>
-          <pre id="teamOutput" class="msg" style="white-space:pre-wrap;"></pre>
-        </div>
-      </section>
-
-      <section id="playerPane" class="pane">
-        <div class="hero">
-          <h2>Player</h2>
-          <div class="sub">Loads trending, profile, career, batting, bowling, and search.</div>
-        </div>
-        <div class="card">
-          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <input id="playerIdInput" placeholder="Player ID, e.g. 8733" style="padding:10px;border-radius:8px;border:1px solid var(--line);background:#13213a;color:white;">
-            <input id="playerNameInput" placeholder="Optional search name, e.g. Tucker" style="padding:10px;border-radius:8px;border:1px solid var(--line);background:#13213a;color:white;">
-            <button class="section-btn active" id="loadPlayerBtn">Load Player Bundle</button>
-          </div>
-          <pre id="playerOutput" class="msg" style="white-space:pre-wrap;"></pre>
-        </div>
-      </section>
-
-      <section id="rankingsPane" class="pane">
-        <div class="hero">
-          <h2>Rankings</h2>
-          <div class="sub">Loads rankings, ICC standings, and top stats.</div>
-        </div>
-        <div class="card">
-          <button class="section-btn active" id="loadRankingsBtn">Load Rankings Bundle</button>
-          <pre id="rankingsOutput" class="msg" style="white-space:pre-wrap; margin-top:12px;"></pre>
-        </div>
-      </section>
-
-      <section id="photosPane" class="pane">
-        <div class="hero">
-          <h2>Photos</h2>
-          <div class="sub">Loads photo index and optional photo detail.</div>
-        </div>
-        <div class="card">
-          <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-            <input id="photoIdInput" placeholder="Optional Photo ID, e.g. 5374" style="padding:10px;border-radius:8px;border:1px solid var(--line);background:#13213a;color:white;">
-            <button class="section-btn active" id="loadPhotosBtn">Load Photos Bundle</button>
-          </div>
-          <pre id="photosOutput" class="msg" style="white-space:pre-wrap;"></pre>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <script>
-    const WORKER = "https://cricbuzz.namanmehra.workers.dev";
-    let currentFeed = "live";
-    let allFeedMatches = { live: [], upcoming: [], recent: [] };
-    let currentMatchId = null;
-
-    function setTopStatus(text) {
-      document.getElementById("topStatus").textContent = text;
-    }
-
-    function safe(obj, path, fallback = null) {
-      try {
-        return path.split(".").reduce((acc, key) => acc?.[key], obj) ?? fallback;
-      } catch {
-        return fallback;
-      }
-    }
-
-    async function workerJson(url) {
-      const res = await fetch(url);
-      const text = await res.text();
-      let json;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        throw new Error("Worker returned non-JSON.");
-      }
-      return json;
-    }
-
-    function flattenMatchesFromBundlePart(part) {
-      const matches = [];
-      const data = part?.data;
-      (data?.typeMatches || []).forEach(typeBlock => {
-        (typeBlock?.seriesMatches || []).forEach(series => {
-          const wrap = series?.seriesAdWrapper;
-          (wrap?.matches || []).forEach(match => {
-            const info = match?.matchInfo || {};
-            matches.push({
-              matchId: info.matchId,
-              team1: info?.team1?.teamName || "Team 1",
-              team2: info?.team2?.teamName || "Team 2",
-              status: info?.status || "",
-              raw: info
-            });
-          });
-        });
-      });
-      return matches;
-    }
-
-    async function loadMatchesBundle() {
-      setTopStatus("Loading bundled feeds...");
-      document.getElementById("sidebarStatus").textContent = "Loading bundled matches...";
-
-      const data = await workerJson(`${WORKER}/bundle/matches`);
-
-      allFeedMatches.live = flattenMatchesFromBundlePart(data.live);
-      allFeedMatches.upcoming = flattenMatchesFromBundlePart(data.upcoming);
-      allFeedMatches.recent = flattenMatchesFromBundlePart(data.recent);
-
-      renderFeed(currentFeed);
-      setTopStatus("Connected");
-    }
-
-    function renderFeed(feed) {
-      currentFeed = feed;
-      document.querySelectorAll(".tab-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.feed === feed);
-      });
-
-      const container = document.getElementById("matches");
-      const list = allFeedMatches[feed] || [];
-      container.innerHTML = "";
-
-      document.getElementById("sidebarStatus").textContent =
-        list.length ? `${list.length} ${feed} matches loaded.` : `No ${feed} matches found.`;
-
-      list.forEach(m => {
-        const div = document.createElement("div");
-        div.className = "match" + (String(m.matchId) === String(currentMatchId) ? " active" : "");
-        div.innerHTML = `
-          <div class="match-title">${m.team1} vs ${m.team2}</div>
-          <div class="match-sub">${m.status}</div>
-        `;
-        div.onclick = () => loadMatchBundle(m.matchId, m);
-        container.appendChild(div);
-      });
-    }
-
-    function bestBundleData(bundle, keyOrder) {
-      for (const key of keyOrder) {
-        const item = bundle?.[key];
-        if (item?.ok && item?.data) return item.data;
-      }
-      return null;
-    }
-
-    function renderMatchHeader(header, score, meta) {
-      const team1 =
-        safe(header, "matchHeader.team1.name") ||
-        safe(score, "matchHeader.team1.name") ||
-        meta?.team1 ||
-        "Team 1";
-
-      const team2 =
-        safe(header, "matchHeader.team2.name") ||
-        safe(score, "matchHeader.team2.name") ||
-        meta?.team2 ||
-        "Team 2";
-
-      const status =
-        safe(header, "matchHeader.status") ||
-        safe(score, "matchHeader.status") ||
-        meta?.status ||
-        "";
-
-      const venue =
-        safe(header, "matchHeader.venueInfo.ground") ||
-        safe(header, "matchHeader.venue.name") ||
-        safe(score, "matchHeader.venueInfo.ground") ||
-        safe(score, "matchHeader.venue.name") ||
-        "";
-
-      document.getElementById("matchTitle").textContent = `${team1} vs ${team2}`;
-      document.getElementById("matchSub").textContent = [status, venue].filter(Boolean).join(" • ");
-    }
-
-    function renderMeta(header, score) {
-      const box = document.getElementById("metaBadges");
-      const badges = [];
-
-      const desc = safe(header, "matchHeader.matchDescription") || safe(score, "matchHeader.matchDescription");
-      const state = safe(header, "matchHeader.stateTitle") || safe(score, "matchHeader.stateTitle");
-      const toss = safe(header, "matchHeader.tossResults.tossWinnerName");
-      const result = safe(header, "matchHeader.result");
-
-      if (desc) badges.push(desc);
-      if (state) badges.push(state);
-      if (toss) badges.push(`Toss: ${toss}`);
-      if (result && typeof result === "string") badges.push(result);
-
-      box.innerHTML = badges.length
-        ? badges.map(x => `<span class="badge">${x}</span>`).join("")
-        : `<div class="msg">No extra meta available.</div>`;
-    }
-
-    function extractBatsmen(score) {
-      const cards = score?.scoreCard || [];
-      for (const inn of cards) {
-        const bats = inn?.batTeamDetails?.batsmenData;
-        if (bats && Object.keys(bats).length) return bats;
-      }
-      return null;
-    }
-
-    function extractBowlers(score) {
-      const cards = score?.scoreCard || [];
-      for (const inn of cards) {
-        const bowlers = inn?.bowlTeamDetails?.bowlersData || inn?.bowTeamDetails?.bowlersData;
-        if (bowlers && Object.keys(bowlers).length) return bowlers;
-      }
-      return null;
-    }
-
-    function renderBatting(score) {
-      const table = document.getElementById("batTable");
-      const bats = extractBatsmen(score);
-
-      if (!bats) {
-        table.innerHTML = `<tr><td class="msg">No batting data available.</td></tr>`;
-        return;
-      }
-
-      table.innerHTML = `
-        <tr>
-          <th>Player</th>
-          <th>Runs</th>
-          <th>Balls</th>
-          <th>4s</th>
-          <th>6s</th>
-          <th>SR</th>
-        </tr>
-      `;
-
-      Object.values(bats).forEach(b => {
-        table.innerHTML += `
-          <tr>
-            <td>${b?.batName || ""}</td>
-            <td>${b?.runs ?? ""}</td>
-            <td>${b?.balls ?? ""}</td>
-            <td>${b?.fours ?? ""}</td>
-            <td>${b?.sixes ?? ""}</td>
-            <td>${b?.strikeRate ?? ""}</td>
-          </tr>
-        `;
-      });
-    }
-
-    function renderBowling(score) {
-      const table = document.getElementById("bowlTable");
-      const bowlers = extractBowlers(score);
-
-      if (!bowlers) {
-        table.innerHTML = `<tr><td class="msg">No bowling data available.</td></tr>`;
-        return;
-      }
-
-      table.innerHTML = `
-        <tr>
-          <th>Bowler</th>
-          <th>Overs</th>
-          <th>Runs</th>
-          <th>Wickets</th>
-          <th>Dots</th>
-        </tr>
-      `;
-
-      Object.values(bowlers).forEach(b => {
-        table.innerHTML += `
-          <tr>
-            <td>${b?.bowlerName || b?.bowlName || ""}</td>
-            <td>${b?.overs ?? ""}</td>
-            <td>${b?.runs ?? ""}</td>
-            <td>${b?.wickets ?? ""}</td>
-            <td>${b?.dots ?? ""}</td>
-          </tr>
-        `;
-      });
-    }
-
-    function renderOvers(overs) {
-      const chartDiv = document.getElementById("wormChart");
-      const summary =
-        overs?.overSummary ||
-        overs?.overSummaryList ||
-        [];
-
-      if (!summary.length) {
-        chartDiv.innerHTML = `<div class="msg">No over progression available.</div>`;
-        return;
-      }
-
-      let total = 0;
-      const y = summary.map(o => {
-        total += Number(o?.runs || 0);
-        return total;
-      });
-
-      const x = summary.map((o, i) => `Over ${o?.overNum ?? o?.over ?? i + 1}`);
-
-      Plotly.newPlot("wormChart", [{
-        x,
-        y,
-        type: "scatter",
-        mode: "lines+markers",
-        line: { color: "#ffc857", width: 3 },
-        marker: { size: 6 }
-      }], {
-        paper_bgcolor: "#0f1b2f",
-        plot_bgcolor: "#0f1b2f",
-        font: { color: "#eef2f7" },
-        margin: { t: 10, r: 20, b: 50, l: 40 },
-        xaxis: { gridcolor: "#1f2d49" },
-        yaxis: { gridcolor: "#1f2d49" }
-      }, {
-        displayModeBar: false,
-        responsive: true
-      });
-    }
-
-    function renderPhase(overs, score) {
-      const summary =
-        overs?.overSummary ||
-        overs?.overSummaryList ||
-        [];
-
-      if (summary.length) {
-        let power = 0, middle = 0, death = 0;
-        summary.forEach((o, idx) => {
-          const overNo = Number(o?.overNum ?? o?.over ?? idx + 1);
-          const runs = Number(o?.runs || 0);
-          if (overNo <= 6) power += runs;
-          else if (overNo <= 15) middle += runs;
-          else death += runs;
-        });
-        document.getElementById("powerValue").textContent = power;
-        document.getElementById("middleValue").textContent = middle;
-        document.getElementById("deathValue").textContent = death;
-        return;
-      }
-
-      const innings = score?.scoreCard || [];
-      if (innings.length) {
-        const total = innings.reduce((s, inn) => s + Number(inn?.scoreDetails?.runs || 0), 0);
-        document.getElementById("powerValue").textContent = Math.round(total * 0.25);
-        document.getElementById("middleValue").textContent = Math.round(total * 0.45);
-        document.getElementById("deathValue").textContent = Math.round(total * 0.30);
-        return;
-      }
-
-      document.getElementById("powerValue").textContent = "-";
-      document.getElementById("middleValue").textContent = "-";
-      document.getElementById("deathValue").textContent = "-";
-    }
-
-    function renderLeanback(leanback) {
-      const box = document.getElementById("leanbackBox");
-      if (!leanback) {
-        box.textContent = "No leanback/live detail available.";
-        return;
-      }
-      const text = JSON.stringify(leanback).slice(0, 500);
-      box.textContent = text || "No leanback/live detail available.";
-    }
-
-    function renderTeam(teamData) {
-      const box = document.getElementById("teamBox");
-      if (!teamData) {
-        box.textContent = "No team-specific detail available.";
-        return;
-      }
-      const text = JSON.stringify(teamData).slice(0, 500);
-      box.textContent = text || "No team-specific detail available.";
-    }
-
-    async function loadMatchBundle(matchId, meta) {
-      currentMatchId = matchId;
-      setTopStatus("Loading match bundle...");
-
-      document.getElementById("matchTitle").textContent = "Loading...";
-      document.getElementById("matchSub").textContent = "Fetching multiple APIs...";
-      document.getElementById("metaBadges").innerHTML = "";
-      document.getElementById("batTable").innerHTML = "";
-      document.getElementById("bowlTable").innerHTML = "";
-      document.getElementById("wormChart").innerHTML = `<div class="msg">Loading chart...</div>`;
-      document.getElementById("leanbackBox").textContent = "Loading...";
-      document.getElementById("teamBox").textContent = "Loading...";
-      document.getElementById("powerValue").textContent = "-";
-      document.getElementById("middleValue").textContent = "-";
-      document.getElementById("deathValue").textContent = "-";
-
-      const teamId = meta?.raw?.team1?.teamId || "";
-
-      const url = teamId
-        ? `${WORKER}/bundle/match?matchId=${encodeURIComponent(matchId)}&teamId=${encodeURIComponent(teamId)}`
-        : `${WORKER}/bundle/match?matchId=${encodeURIComponent(matchId)}`;
-
-      const bundle = await workerJson(url);
-
-      const header = bestBundleData(bundle, ["header"]);
-      const score = bestBundleData(bundle, ["hscard", "scard"]);
-      const overs = bestBundleData(bundle, ["overs"]);
-      const leanback = bestBundleData(bundle, ["leanback"]);
-      const teamData = bestBundleData(bundle, ["team"]);
-
-      renderMatchHeader(header, score, meta);
-      renderMeta(header, score);
-      renderBatting(score);
-      renderBowling(score);
-      renderOvers(overs);
-      renderPhase(overs, score);
-      renderLeanback(leanback);
-      renderTeam(teamData);
-
-      renderFeed(currentFeed);
-      setTopStatus("Match bundle loaded");
-    }
-
-    function switchPane(id) {
-      document.querySelectorAll(".section-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.pane === id);
-      });
-      document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-    }
-
-    async function loadSeriesBundle() {
-      const seriesId = document.getElementById("seriesIdInput").value.trim();
-      const squadId = document.getElementById("squadIdInput").value.trim();
-      if (!seriesId) return;
-      const url = squadId
-        ? `${WORKER}/bundle/series?seriesId=${encodeURIComponent(seriesId)}&squadId=${encodeURIComponent(squadId)}`
-        : `${WORKER}/bundle/series?seriesId=${encodeURIComponent(seriesId)}`;
-      const data = await workerJson(url);
-      document.getElementById("seriesOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadTeamBundle() {
-      const teamId = document.getElementById("teamIdInput").value.trim();
-      if (!teamId) return;
-      const data = await workerJson(`${WORKER}/bundle/team?teamId=${encodeURIComponent(teamId)}`);
-      document.getElementById("teamOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadPlayerBundle() {
-      const playerId = document.getElementById("playerIdInput").value.trim();
-      const playerName = document.getElementById("playerNameInput").value.trim();
-      if (!playerId) return;
-      const url = playerName
-        ? `${WORKER}/bundle/player?playerId=${encodeURIComponent(playerId)}&playerName=${encodeURIComponent(playerName)}`
-        : `${WORKER}/bundle/player?playerId=${encodeURIComponent(playerId)}`;
-      const data = await workerJson(url);
-      document.getElementById("playerOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadRankingsBundle() {
-      const data = await workerJson(`${WORKER}/bundle/rankings`);
-      document.getElementById("rankingsOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadPhotosBundle() {
-      const photoId = document.getElementById("photoIdInput").value.trim();
-      const url = photoId
-        ? `${WORKER}/bundle/photos?photoId=${encodeURIComponent(photoId)}`
-        : `${WORKER}/bundle/photos`;
-      const data = await workerJson(url);
-      document.getElementById("photosOutput").textContent = JSON.stringify(data, null, 2);
-    }
-
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => renderFeed(btn.dataset.feed));
-    });
-
-    document.querySelectorAll(".section-btn").forEach(btn => {
-      if (btn.dataset.pane) {
-        btn.addEventListener("click", () => switchPane(btn.dataset.pane));
-      }
-    });
-
-    document.getElementById("loadSeriesBtn").addEventListener("click", loadSeriesBundle);
-    document.getElementById("loadTeamBtn").addEventListener("click", loadTeamBundle);
-    document.getElementById("loadPlayerBtn").addEventListener("click", loadPlayerBundle);
-    document.getElementById("loadRankingsBtn").addEventListener("click", loadRankingsBundle);
-    document.getElementById("loadPhotosBtn").addEventListener("click", loadPhotosBundle);
-
-    loadMatchesBundle().catch(err => {
-      console.error(err);
-      setTopStatus("Worker connection failed");
-      document.getElementById("sidebarStatus").textContent = "Failed to load bundled matches.";
-    });
-  </script>
+
+<h1>🏏 Cricbuzz Scorecard</h1>
+
+<div class="card">
+<h2 id="matchTitle">Loading match...</h2>
+<p id="matchStatus"></p>
+</div>
+
+<div class="card">
+<h3>Run Progression</h3>
+<div id="chart"></div>
+</div>
+
+<div class="card">
+<h3>Batting</h3>
+<table id="battingTable"></table>
+</div>
+
+<div class="card">
+<h3>Bowling</h3>
+<table id="bowlingTable"></table>
+</div>
+
+<script>
+
+const API_KEY = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095";
+const API_HOST = "cricbuzz-cricket.p.rapidapi.com";
+const MATCH_ID = 122698;
+
+async function loadScorecard(){
+
+const url = `https://${API_HOST}/mcenter/v1/${MATCH_ID}/scard`;
+
+const res = await fetch(url,{
+headers:{
+"x-rapidapi-key":API_KEY,
+"x-rapidapi-host":API_HOST
+}
+});
+
+const data = await res.json();
+
+const header = data.matchHeader;
+
+document.getElementById("matchTitle").innerText =
+header.team1.name + " vs " + header.team2.name;
+
+document.getElementById("matchStatus").innerText =
+header.status;
+
+
+/* batting */
+
+const innings = data.scoreCard[0];
+const batsmen = innings.batTeamDetails.batsmenData;
+
+let batHTML = `
+<tr>
+<th>Player</th>
+<th>Runs</th>
+<th>Balls</th>
+<th>4s</th>
+<th>6s</th>
+<th>SR</th>
+</tr>
+`;
+
+Object.values(batsmen).forEach(b=>{
+
+batHTML += `
+<tr>
+<td>${b.batName}</td>
+<td>${b.runs}</td>
+<td>${b.balls}</td>
+<td>${b.fours}</td>
+<td>${b.sixes}</td>
+<td>${b.strikeRate}</td>
+</tr>
+`;
+
+});
+
+document.getElementById("battingTable").innerHTML = batHTML;
+
+
+/* bowling */
+
+const bowlers = innings.bowlTeamDetails.bowlersData;
+
+let bowlHTML = `
+<tr>
+<th>Bowler</th>
+<th>Overs</th>
+<th>Runs</th>
+<th>Wickets</th>
+</tr>
+`;
+
+Object.values(bowlers).forEach(b=>{
+
+bowlHTML += `
+<tr>
+<td>${b.bowlerName}</td>
+<td>${b.overs}</td>
+<td>${b.runs}</td>
+<td>${b.wickets}</td>
+</tr>
+`;
+
+});
+
+document.getElementById("bowlingTable").innerHTML = bowlHTML;
+
+
+/* run chart */
+
+let x=[];
+let y=[];
+let total=0;
+
+data.overSummaryList.forEach((o,i)=>{
+
+total+=o.runs;
+
+x.push("Over "+(i+1));
+y.push(total);
+
+});
+
+Plotly.newPlot("chart",[{
+x:x,
+y:y,
+mode:"lines+markers",
+type:"scatter",
+line:{color:"#ffc857"}
+}],
+{
+paper_bgcolor:"#0f1b2f",
+plot_bgcolor:"#0f1b2f",
+font:{color:"white"}
+});
+
+}
+
+loadScorecard();
+
+</script>
+
 </body>
 </html>
