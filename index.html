@@ -1,75 +1,154 @@
-// ── Cricbuzz API Scoring Integration ──
-window.syncDailyScores = async function(matchIdInput) {
-  const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; // Your verified key
-  const matchId = matchIdInput || prompt("Enter Match ID (e.g., 104367):", "104367");
-  if(!matchId) return;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏏 Cricbuzz Match Data Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #D4A847; --bg: #07090F; --bg2: #0C1018; --txt: #EDE9E0; --bdr: rgba(255,255,255,0.1); --ok: #10B981; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--txt); padding: 30px; margin: 0; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1, h2, h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--gold); }
+        .card { background: var(--bg2); border: 1px solid var(--bdr); border-radius: 12px; padding: 25px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .btn { background: var(--gold); border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; color: #000; font-size: 1rem; }
+        .btn:hover { opacity: 0.9; }
+        input { padding: 12px; border-radius: 6px; border: 1px solid var(--bdr); background: #111; color: #fff; width: 200px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; color: var(--gold); font-size: 0.7rem; text-transform: uppercase; border-bottom: 2px solid var(--bdr); padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid var(--bdr); font-size: 0.85rem; }
+        .stat-highlight { color: var(--ok); font-weight: bold; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; background: rgba(255,255,255,0.05); }
+        #status { margin-bottom: 15px; font-size: 0.85rem; color: #888; }
+        pre { background: #000; padding: 15px; border-radius: 8px; overflow-x: auto; color: #10B981; font-size: 11px; max-height: 400px; }
+    </style>
+</head>
+<body>
 
-  window.showAlert("⚡ Connecting to Cricbuzz API...", "info");
-
-  try {
-    const response = await fetch(`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': apiKey,
-        'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-    const data = await response.json();
+<div class="container">
+    <h1>🏏 IPL Match Data Dashboard</h1>
     
-    if (!data.scoreCard) throw new Error("No scorecard data found for this ID.");
+    <div class="card">
+        <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="matchId" value="104367" placeholder="Enter Match ID">
+            <button class="btn" onclick="fetchFullMatchData()">Download Match Data</button>
+        </div>
+        <div id="status">Enter a Match ID (e.g., 104367 for MI vs CSK) to view all fields.</div>
+    </div>
 
-    // 1. Auto-fill Match Meta
-    document.getElementById('matchLabel').value = data.matchHeader?.matchDescription || `Match ${matchId}`;
-    document.getElementById('mfWinner').value = (data.matchHeader?.result?.winningTeam || "").toUpperCase();
-    document.getElementById('mfMotm').value = data.matchHeader?.playersOfTheMatch?.[0]?.name || "";
+    <div id="results" style="display:none;">
+        <div class="grid">
+            <div class="card">
+                <h3>🏆 Match Info & Honors</h3>
+                <div id="summaryContent"></div>
+            </div>
+            <div class="card">
+                <h3>📊 Scoring Overview</h3>
+                <div id="scoringMeta"></div>
+            </div>
+        </div>
 
-    // 2. Clear existing rows to prevent duplicates
-    document.getElementById('battingRows').innerHTML = '';
-    document.getElementById('bowlingRows').innerHTML = '';
-    battingRowCount = 0; bowlingRowCount = 0;
+        <div class="card">
+            <h3>🏏 Batting Performance (Required Fields)</h3>
+            <table id="batTable">
+                <thead>
+                    <tr><th>Player</th><th>Runs</th><th>Balls</th><th>6s</th><th>S/R</th><th>Dots (Est)</th><th>Status</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
 
-    // 3. Process Innings Data
-    data.scoreCard.forEach(innings => {
-      // --- Batting Sync ---
-      const batsmen = innings.batTeamDetails.batsmenData;
-      Object.values(batsmen).forEach(b => {
-        window.addBattingRow();
-        const id = battingRowCount - 1;
-        document.getElementById(`br${id}name`).value = b.batName;
-        document.getElementById(`br${id}runs`).value = b.runs;
-        document.getElementById(`br${id}balls`).value = b.balls;
-        document.getElementById(`br${id}sixes`).value = b.sixes;
-        
-        // Auto-detect Dismissal type for penalties
-        const dis = (b.outDesc || "").toLowerCase();
-        const sel = document.getElementById(`br${id}dis`);
-        if (dis.includes("not out")) sel.value = "notout";
-        else if (b.runs === 0 && !dis.includes("not out")) sel.value = "duck";
-        else sel.value = "out";
-      });
+        <div class="card">
+            <h3> bowling 🎳 Bowling Performance (Required Fields)</h3>
+            <table id="bowlTable">
+                <thead>
+                    <tr><th>Bowler</th><th>Overs</th><th>Mdns</th><th>Runs</th><th>Wkts</th><th>Dot Balls</th><th>Econ</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
 
-      // --- Bowling Sync (Includes Dots & Maidens) ---
-      const bowlers = innings.bowTeamDetails.bowlersData;
-      Object.values(bowlers).forEach(bw => {
-        window.addBowlingRow();
-        const id = bowlingRowCount - 1;
-        document.getElementById(`bow${id}name`).value = bw.bowlerName;
-        document.getElementById(`bow${id}overs`).value = bw.overs;
-        document.getElementById(`bow${id}runs`).value = bw.runs;
-        document.getElementById(`bow${id}wkts`).value = bw.wickets;
-        document.getElementById(`bow${id}dots`).value = bw.dots || 0; // Directly from API
-        document.getElementById(`bow${id}maidens`).value = bw.maidens || 0; // For +20 bonus
-      });
-    });
+        <div class="card">
+            <h3>📋 Raw JSON Inspector</h3>
+            <pre id="rawJson"></pre>
+        </div>
+    </div>
+</div>
 
-    window.showAlert(`✅ Match ${matchId} Synced Successfully!`, "ok");
-    document.getElementById('matchFormBody').style.display = 'block';
+<script>
+async function fetchFullMatchData() {
+    const mId = document.getElementById('matchId').value;
+    const status = document.getElementById('status');
+    const results = document.getElementById('results');
+    const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095";
 
-  } catch (err) {
-    window.showAlert(`Sync Failed: ${err.message}`, "err");
-    console.error("Sync Error Details:", err);
-  }
-};
+    status.innerHTML = "⚡ <b>Fetching...</b> Connecting to Cricbuzz RapidAPI.";
+    results.style.display = "none";
+
+    try {
+        const response = await fetch(`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${mId}/hscard`, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const data = await response.json();
+        if (!data.scoreCard) throw new Error("Scorecard not found for this Match ID.");
+
+        results.style.display = "block";
+        document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+
+        // --- Summary Content ---
+        const header = data.matchHeader;
+        const motm = header.playersOfTheMatch?.[0]?.name || "TBA";
+        const winner = header.result?.winningTeam || "In Progress";
+        document.getElementById('summaryContent').innerHTML = `
+            <p><b>Match:</b> ${header.matchDescription}</p>
+            <p><b>Winner:</b> <span class="stat-highlight">${winner}</span></p>
+            <p><b>Man of the Match:</b> <span class="stat-highlight">${motm}</span></p>
+            <p><b>Venue:</b> ${header.venue.name}, ${header.venue.city}</p>
+        `;
+
+        // --- Batting Rows ---
+        const batBody = document.querySelector('#batTable tbody');
+        batBody.innerHTML = '';
+        // Processing first innings for this view
+        Object.values(data.scoreCard[0].batTeamDetails.batsmenData).forEach(b => {
+            // Dot Ball Est: Balls - (4s + 6s + other scoring shots)
+            const estDots = b.balls - (b.fours + b.sixes + 5); 
+            batBody.innerHTML += `<tr>
+                <td><b>${b.batName}</b></td>
+                <td>${b.runs}</td><td>${b.balls}</td><td>${b.sixes}</td>
+                <td>${b.strikeRate}</td>
+                <td class="stat-highlight">${estDots > 0 ? estDots : 0}</td>
+                <td style="color:#888; font-style:italic;">${b.outDesc}</td>
+            </tr>`;
+        });
+
+        // --- Bowling Rows ---
+        const bowlBody = document.querySelector('#bowlTable tbody');
+        bowlBody.innerHTML = '';
+        Object.values(data.scoreCard[0].bowTeamDetails.bowlersData).forEach(bw => {
+            bowlBody.innerHTML += `<tr>
+                <td><b>${bw.bowlerName}</b></td>
+                <td>${bw.overs}</td><td>${bw.maidens}</td><td>${bw.runs}</td>
+                <td>${bw.wickets}</td>
+                <td class="stat-highlight">${bw.dots || 0}</td>
+                <td>${bw.economy}</td>
+            </tr>`;
+        });
+
+        status.innerHTML = "✅ <b>Success!</b> Full scorecard and fantasy fields pulled.";
+    } catch (err) {
+        status.innerHTML = `<span style="color:var(--err)">❌ <b>Error:</b> ${err.message}</span>`;
+        console.error(err);
+    }
+}
+</script>
+</body>
+</html>
