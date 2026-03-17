@@ -1,10 +1,10 @@
-// ── Cricbuzz API Scoring Automation ──
+// ── Cricbuzz API Scoring Integration ──
 window.syncDailyScores = async function(matchIdInput) {
-  const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; 
+  const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; // Your verified key
   const matchId = matchIdInput || prompt("Enter Match ID (e.g., 104367):", "104367");
   if(!matchId) return;
 
-  window.showAlert("⚡ Connecting to Cricbuzz...", "info");
+  window.showAlert("⚡ Connecting to Cricbuzz API...", "info");
 
   try {
     const response = await fetch(`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`, {
@@ -21,19 +21,19 @@ window.syncDailyScores = async function(matchIdInput) {
     
     if (!data.scoreCard) throw new Error("No scorecard data found for this ID.");
 
-    // Update Match Metadata
+    // 1. Auto-fill Match Meta
     document.getElementById('matchLabel').value = data.matchHeader?.matchDescription || `Match ${matchId}`;
     document.getElementById('mfWinner').value = (data.matchHeader?.result?.winningTeam || "").toUpperCase();
     document.getElementById('mfMotm').value = data.matchHeader?.playersOfTheMatch?.[0]?.name || "";
 
-    // Clear existing rows
+    // 2. Clear existing rows to prevent duplicates
     document.getElementById('battingRows').innerHTML = '';
     document.getElementById('bowlingRows').innerHTML = '';
     battingRowCount = 0; bowlingRowCount = 0;
 
-    // Process Innings
+    // 3. Process Innings Data
     data.scoreCard.forEach(innings => {
-      // 🏏 Sync Batting
+      // --- Batting Sync ---
       const batsmen = innings.batTeamDetails.batsmenData;
       Object.values(batsmen).forEach(b => {
         window.addBattingRow();
@@ -43,14 +43,15 @@ window.syncDailyScores = async function(matchIdInput) {
         document.getElementById(`br${id}balls`).value = b.balls;
         document.getElementById(`br${id}sixes`).value = b.sixes;
         
+        // Auto-detect Dismissal type for penalties
         const dis = (b.outDesc || "").toLowerCase();
         const sel = document.getElementById(`br${id}dis`);
         if (dis.includes("not out")) sel.value = "notout";
-        else if (b.runs === 0) sel.value = "duck";
+        else if (b.runs === 0 && !dis.includes("not out")) sel.value = "duck";
         else sel.value = "out";
       });
 
-      // 🎳 Sync Bowling (Includes Dot Balls & Maidens)
+      // --- Bowling Sync (Includes Dots & Maidens) ---
       const bowlers = innings.bowTeamDetails.bowlersData;
       Object.values(bowlers).forEach(bw => {
         window.addBowlingRow();
@@ -59,16 +60,16 @@ window.syncDailyScores = async function(matchIdInput) {
         document.getElementById(`bow${id}overs`).value = bw.overs;
         document.getElementById(`bow${id}runs`).value = bw.runs;
         document.getElementById(`bow${id}wkts`).value = bw.wickets;
-        document.getElementById(`bow${id}dots`).value = bw.dots || 0;
-        document.getElementById(`bow${id}maidens`).value = bw.maidens || 0;
+        document.getElementById(`bow${id}dots`).value = bw.dots || 0; // Directly from API
+        document.getElementById(`bow${id}maidens`).value = bw.maidens || 0; // For +20 bonus
       });
     });
 
-    window.showAlert(`✅ Match ${matchId} Synced!`, "ok");
+    window.showAlert(`✅ Match ${matchId} Synced Successfully!`, "ok");
     document.getElementById('matchFormBody').style.display = 'block';
 
   } catch (err) {
     window.showAlert(`Sync Failed: ${err.message}`, "err");
-    console.error(err);
+    console.error("Sync Error Details:", err);
   }
 };
