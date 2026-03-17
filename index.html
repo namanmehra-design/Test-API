@@ -1,132 +1,223 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Scorecard Test</title>
-    <style>
-        body { background: #111; color: white; font-family: sans-serif; padding: 20px; }
-        .match-btn { background: #333; color: #fff; padding: 10px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #222; }
-        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
-        th { background: #444; color: #ffc857; }
-        .loading { color: #ffc857; font-weight: bold; }
-    </style>
+<title>Basic Scorecard Sync</title>
+
+<style>
+body{
+background:#111;
+color:white;
+font-family:sans-serif;
+padding:20px;
+}
+
+.match-btn{
+background:#333;
+color:#fff;
+padding:10px;
+margin:5px;
+cursor:pointer;
+border:none;
+border-radius:4px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+background:#222;
+}
+
+th,td{
+border:1px solid #444;
+padding:10px;
+text-align:left;
+}
+
+th{
+background:#444;
+color:#ffc857;
+}
+
+.loading{
+color:#ffc857;
+font-weight:bold;
+}
+</style>
 </head>
+
 <body>
 
-    <h2>🏏 Basic Scorecard Sync</h2>
-    <div id="status">Fetching Match List...</div>
-    <div id="matchButtons"></div>
-    
-    <div id="scorecardArea" style="display:none;">
-        <h3 id="mName"></h3>
-        <h4>Batting</h4>
-        <table id="batTable"></table>
-        <h4>Bowling</h4>
-        <table id="bowlTable"></table>
-    </div>
+<h2>🏏 Basic Scorecard Sync</h2>
+
+<div id="status">Fetching Match List...</div>
+
+<div id="matchButtons"></div>
+
+<div id="scorecardArea" style="display:none;">
+
+<h3 id="mName"></h3>
+
+<h4>Batting</h4>
+<table id="batTable"></table>
+
+<h4>Bowling</h4>
+<table id="bowlTable"></table>
+
+</div>
 
 <script>
-const WORKER = "https://cricbuzz.namanmehra.workers.dev";
 
-async function api(path) {
-    const r = await fetch(`${WORKER}?endpoint=${encodeURIComponent(path)}`);
-    const text = await r.text();
+const WORKER="https://cricbuzz.namanmehra.workers.dev";
 
-    let data;
-    try {
-        data = JSON.parse(text);
-    } catch (e) {
-        throw new Error("Non-JSON response: " + text.slice(0, 120));
-    }
+async function api(path){
 
-    if (!r.ok) {
-        throw new Error(data.error || data.message || `HTTP ${r.status}`);
-    }
+const r=await fetch(`${WORKER}?endpoint=${encodeURIComponent(path)}`);
+return await r.json();
 
-    return data;
 }
 
-async function start() {
-    try {
-        const data = await api("/matches/v1/live");
-        document.getElementById("status").innerText = "Click a match below:";
-        
-        let matches = [];
-        data.typeMatches?.forEach(t => 
-            t.seriesMatches?.forEach(s => 
-                s.seriesAdWrapper?.matches?.forEach(m => 
-                    matches.push(m.matchInfo)
-                )
-            )
-        );
+function flattenMatches(data){
 
-        if (!matches.length) {
-            document.getElementById("status").innerText = "No live matches found.";
-            return;
-        }
+let matches=[];
 
-        document.getElementById("matchButtons").innerHTML = matches.map(m => 
-            `<button class="match-btn" onclick="showScore(${m.matchId})">${m.team1.teamName} vs ${m.team2.teamName}</button>`
-        ).join('');
-    } catch (e) {
-        console.error(e);
-        document.getElementById("status").innerText = "Connection Error: " + e.message;
-    }
+data.typeMatches?.forEach(t=>
+t.seriesMatches?.forEach(s=>
+s.seriesAdWrapper?.matches?.forEach(m=>
+matches.push(m.matchInfo)
+)
+)
+);
+
+return matches;
+
 }
 
-async function showScore(id) {
-    document.getElementById("status").innerText = "Loading Scorecard...";
-    try {
-        let data;
+async function loadMatches(){
 
-        try {
-            data = await api(`/mcenter/v1/${id}/hscard`);
-        } catch {
-            data = await api(`/mcenter/v1/${id}/scard`);
-        }
+try{
 
-        if (!data || !data.scoreCard || !data.scoreCard.length) {
-            throw new Error("No scorecard returned for this match.");
-        }
+let data=await api("/matches/v1/live");
+let matches=flattenMatches(data);
 
-        document.getElementById("scorecardArea").style.display = "block";
-        document.getElementById("mName").innerText =
-            data.matchHeader?.matchDescription ||
-            `${data.matchHeader?.team1?.name || "Team 1"} vs ${data.matchHeader?.team2?.name || "Team 2"}`;
+if(matches.length===0){
 
-        const inn = data.scoreCard[0];
+data=await api("/matches/v1/upcoming");
+matches=flattenMatches(data);
 
-        let bat = `<tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr>`;
-        const batsmen = inn?.batTeamDetails?.batsmenData || {};
-        Object.values(batsmen).forEach(p => {
-            bat += `<tr><td>${p.batName || ""}</td><td>${p.runs ?? ""}</td><td>${p.balls ?? ""}</td></tr>`;
-        });
-        if (!Object.keys(batsmen).length) {
-            bat += `<tr><td colspan="3">No batting data available.</td></tr>`;
-        }
-        document.getElementById("batTable").innerHTML = bat;
-
-        let bowl = `<tr><th>Bowler</th><th>Overs</th><th>Wickets</th><th>Dots</th></tr>`;
-        const bowlers =
-            inn?.bowlTeamDetails?.bowlersData ||
-            inn?.bowTeamDetails?.bowlersData ||
-            {};
-        Object.values(bowlers).forEach(b => {
-            bowl += `<tr><td>${b.bowlerName || b.bowlName || ""}</td><td>${b.overs ?? ""}</td><td>${b.wickets ?? ""}</td><td>${b.dots || 0}</td></tr>`;
-        });
-        if (!Object.keys(bowlers).length) {
-            bowl += `<tr><td colspan="4">No bowling data available.</td></tr>`;
-        }
-        document.getElementById("bowlTable").innerHTML = bowl;
-
-        document.getElementById("status").innerText = "Done.";
-    } catch (e) {
-        console.error(e);
-        document.getElementById("status").innerText = "Scorecard Error: " + e.message;
-    }
 }
 
-start();
+if(matches.length===0){
+
+data=await api("/matches/v1/recent");
+matches=flattenMatches(data);
+
+}
+
+if(matches.length===0){
+
+document.getElementById("status").innerText="No matches available.";
+return;
+
+}
+
+document.getElementById("status").innerText="Click a match below:";
+
+document.getElementById("matchButtons").innerHTML=
+
+matches.map(m=>
+
+`<button class="match-btn" onclick="showScore(${m.matchId})">
+
+${m.team1.teamName} vs ${m.team2.teamName}
+
+</button>`
+
+).join('');
+
+}catch(e){
+
+document.getElementById("status").innerText="Connection Error";
+
+}
+
+}
+
+async function showScore(id){
+
+document.getElementById("status").innerText="Loading Scorecard...";
+
+try{
+
+let data;
+
+try{
+
+data=await api(`/mcenter/v1/${id}/hscard`);
+
+}catch{
+
+data=await api(`/mcenter/v1/${id}/scard`);
+
+}
+
+document.getElementById("scorecardArea").style.display="block";
+
+document.getElementById("mName").innerText=data.matchHeader.matchDescription;
+
+const inn=data.scoreCard[0];
+
+let bat=`<tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr>`;
+
+Object.values(inn.batTeamDetails.batsmenData).forEach(p=>{
+
+bat+=`<tr>
+
+<td>${p.batName}</td>
+
+<td>${p.runs}</td>
+
+<td>${p.balls}</td>
+
+</tr>`;
+
+});
+
+document.getElementById("batTable").innerHTML=bat;
+
+let bowl=`<tr><th>Bowler</th><th>Overs</th><th>Wickets</th><th>Dots</th></tr>`;
+
+Object.values(inn.bowlTeamDetails.bowlersData).forEach(b=>{
+
+bowl+=`<tr>
+
+<td>${b.bowlerName}</td>
+
+<td>${b.overs}</td>
+
+<td>${b.wickets}</td>
+
+<td>${b.dots||0}</td>
+
+</tr>`;
+
+});
+
+document.getElementById("bowlTable").innerHTML=bowl;
+
+document.getElementById("status").innerText="Done.";
+
+}catch(e){
+
+document.getElementById("status").innerText="Scorecard unavailable";
+
+}
+
+}
+
+loadMatches();
+
 </script>
+
 </body>
 </html>
