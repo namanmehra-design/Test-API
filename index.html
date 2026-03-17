@@ -2,26 +2,25 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Cricbuzz Match Dashboard</title>
+<title>Cricbuzz Dashboard</title>
 
 <style>
 
 body{
-background:#0b0f18;
-color:#f4f1ea;
+background:#0a0f1a;
+color:white;
 font-family:system-ui;
 margin:0;
 padding:20px;
 }
 
 h1{
-color:#d4a847;
-margin-bottom:20px;
+color:#f4b942;
 }
 
-.container{
+.layout{
 display:grid;
-grid-template-columns:320px 1fr;
+grid-template-columns:350px 1fr;
 gap:20px;
 }
 
@@ -32,7 +31,7 @@ padding:15px;
 }
 
 .match{
-padding:10px;
+padding:12px;
 border-bottom:1px solid rgba(255,255,255,.08);
 cursor:pointer;
 }
@@ -50,156 +49,103 @@ margin-top:10px;
 th,td{
 padding:8px;
 border-bottom:1px solid rgba(255,255,255,.08);
-font-size:14px;
 }
 
 th{
-color:#d4a847;
-text-align:left;
+color:#f4b942;
 font-size:12px;
 text-transform:uppercase;
 }
 
-.score{
-font-size:20px;
-font-weight:bold;
-margin-bottom:10px;
-}
-
-.status{
-margin-bottom:10px;
-color:#9ca3af;
-}
-
 </style>
+
 </head>
 
 <body>
 
 <h1>🏏 Cricbuzz Match Dashboard</h1>
 
-<div class="container">
+<div class="layout">
 
 <div class="panel">
-
-<div class="status" id="status">Loading matches...</div>
-
-<div id="matchList"></div>
-
+<h3>Matches</h3>
+<div id="matches">Loading matches...</div>
 </div>
 
 <div class="panel">
-
-<div id="matchInfo"></div>
-
+<div id="matchHeader">Select a match</div>
 <div id="scorecard"></div>
-
 </div>
 
 </div>
-
 
 <script>
 
 const API_KEY="6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"
 const HOST="cricbuzz-cricket.p.rapidapi.com"
 
-async function api(url){
+async function api(endpoint){
 
-const res=await fetch("https://"+HOST+url,{
+const r=await fetch(`https://${HOST}${endpoint}`,{
 headers:{
 "x-rapidapi-key":API_KEY,
 "x-rapidapi-host":HOST
 }
 })
 
-return await res.json()
+return await r.json()
 
 }
-
 
 async function loadMatches(){
 
 const data=await api("/matches/v1/recent")
 
-let matches=[]
+let html=""
 
 data.typeMatches.forEach(t=>{
 t.seriesMatches.forEach(s=>{
-(s.seriesAdWrapper.matches||[]).forEach(m=>{
-matches.push(m.matchInfo)
-})
-})
-})
 
-renderMatches(matches)
+if(!s.seriesAdWrapper) return
 
-}
+s.seriesAdWrapper.matches.forEach(m=>{
 
-
-function renderMatches(matches){
-
-const list=document.getElementById("matchList")
-list.innerHTML=""
-
-matches.forEach(m=>{
-
-const div=document.createElement("div")
-
-div.className="match"
-
-const t1=m.team1.teamName
-const t2=m.team2.teamName
-
-div.innerHTML=`<b>${t1} vs ${t2}</b><br>${m.status}`
-
-div.onclick=()=>loadMatch(m.matchId)
-
-list.appendChild(div)
-
-})
-
-document.getElementById("status").innerText="Click a match"
-
-}
-
-
-async function loadMatch(id){
-
-document.getElementById("status").innerText="Loading match..."
-
-const data=await api("/mcenter/v1/"+id+"/hscard")
-
-renderScorecard(data)
-
-}
-
-
-function renderScorecard(data){
-
-const header=data.matchHeader
-
-const scorecards=data.scoreCard
-
-let html=""
+const info=m.matchInfo
 
 html+=`
-<div class="score">
-${header.matchDescription}
-</div>
-<div class="status">
-${header.status}
+<div class="match" onclick="loadScorecard(${info.matchId})">
+<b>${info.team1.teamName} vs ${info.team2.teamName}</b><br>
+${info.status}
 </div>
 `
 
-scorecards.forEach(sc=>{
+})
+
+})
+
+})
+
+document.getElementById("matches").innerHTML=html
+
+}
+
+async function loadScorecard(matchId){
+
+document.getElementById("matchHeader").innerHTML="Loading..."
+
+const data=await api(`/mcenter/v1/${matchId}/hscard`)
+
+const header=data.matchHeader
+
+let html=`<h2>${header.matchDescription}</h2>`
+html+=`<p>${header.status}</p>`
+
+data.scoreCard.forEach(sc=>{
 
 const team=sc.batTeamDetails.batTeamName
-const score=sc.scoreDetails.runs+"/"+sc.scoreDetails.wickets+" ("+sc.scoreDetails.overs+" ov)"
+const score=`${sc.scoreDetails.runs}/${sc.scoreDetails.wickets} (${sc.scoreDetails.overs})`
 
-html+=`<h2>${team} — ${score}</h2>`
-
-const bats=Object.values(sc.batTeamDetails.batsmenData)
+html+=`<h3>${team} — ${score}</h3>`
 
 html+=`
 <table>
@@ -213,7 +159,7 @@ html+=`
 </tr>
 `
 
-bats.forEach(b=>{
+Object.values(sc.batTeamDetails.batsmenData).forEach(b=>{
 
 html+=`
 <tr>
@@ -230,9 +176,6 @@ html+=`
 
 html+=`</table>`
 
-
-const bowls=Object.values(sc.bowTeamDetails.bowlersData)
-
 html+=`
 <table>
 <tr>
@@ -245,7 +188,7 @@ html+=`
 </tr>
 `
 
-bowls.forEach(b=>{
+Object.values(sc.bowTeamDetails.bowlersData).forEach(b=>{
 
 html+=`
 <tr>
@@ -266,10 +209,7 @@ html+=`</table>`
 
 document.getElementById("scorecard").innerHTML=html
 
-document.getElementById("status").innerText="Match loaded"
-
 }
-
 
 loadMatches()
 
