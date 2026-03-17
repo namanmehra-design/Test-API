@@ -2,35 +2,38 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Cricbuzz Dashboard</title>
+<title>CricViz Style Cricket Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+
 body{
-background:#0a0f1a;
-color:white;
+background:#0b0f18;
+color:#eaeaea;
 font-family:system-ui;
 margin:0;
 padding:20px;
 }
 
 h1{
-color:#f7b733;
+color:#f4b942;
 }
 
-.container{
+.layout{
 display:grid;
-grid-template-columns:350px 1fr;
+grid-template-columns:320px 1fr;
 gap:20px;
 }
 
 .panel{
-background:#111827;
+background:#121826;
 border-radius:10px;
 padding:15px;
 }
 
 .match{
-padding:10px;
+padding:12px;
 border-bottom:1px solid rgba(255,255,255,.08);
 cursor:pointer;
 }
@@ -42,17 +45,36 @@ background:#1f2937;
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:10px;
+margin-top:15px;
 }
 
 th,td{
-padding:6px;
-border-bottom:1px solid rgba(255,255,255,.1);
+padding:8px;
+border-bottom:1px solid rgba(255,255,255,.08);
 }
 
 th{
-color:#f7b733;
+color:#f4b942;
 font-size:12px;
+text-transform:uppercase;
+}
+
+.chart{
+margin-top:20px;
+}
+
+.phaseBox{
+display:flex;
+gap:10px;
+margin-top:20px;
+}
+
+.phase{
+background:#1f2937;
+padding:10px;
+border-radius:6px;
+flex:1;
+text-align:center;
 }
 
 </style>
@@ -61,9 +83,9 @@ font-size:12px;
 
 <body>
 
-<h1>🏏 Cricbuzz Match Dashboard</h1>
+<h1>🏏 CricViz Style Match Dashboard</h1>
 
-<div class="container">
+<div class="layout">
 
 <div class="panel">
 <h3>Matches</h3>
@@ -71,8 +93,19 @@ font-size:12px;
 </div>
 
 <div class="panel">
-<div id="header">Select a match</div>
+
+<div id="matchInfo">Select a match</div>
+
+<canvas id="runrateChart" class="chart"></canvas>
+
+<div class="phaseBox">
+<div class="phase" id="powerplay">Powerplay</div>
+<div class="phase" id="middle">Middle</div>
+<div class="phase" id="death">Death</div>
+</div>
+
 <div id="scorecard"></div>
+
 </div>
 
 </div>
@@ -84,24 +117,34 @@ const HOST="cricbuzz-cricket.p.rapidapi.com"
 
 async function api(endpoint){
 
-const url="https://corsproxy.io/?https://"+HOST+endpoint
+try{
 
-const res=await fetch(url,{
+const res = await fetch(
+"https://corsproxy.io/?https://"+HOST+endpoint,
+{
 headers:{
 "x-rapidapi-key":API_KEY,
 "x-rapidapi-host":HOST
 }
-})
+}
+)
 
-return res.json()
+return await res.json()
+
+}catch(e){
+
+alert("API connection failed")
+return null
+
+}
 
 }
 
 async function loadMatches(){
 
-try{
-
 const data=await api("/matches/v1/recent")
+
+if(!data) return
 
 let html=""
 
@@ -115,9 +158,9 @@ s.seriesAdWrapper.matches.forEach(m=>{
 const info=m.matchInfo
 
 html+=`
-<div class="match" onclick="loadScorecard(${info.matchId})">
-<b>${info.team1.teamName} vs ${info.team2.teamName}</b><br>
-${info.status}
+<div class="match" onclick="loadMatch(${info.matchId})">
+<b>${info.team1.teamName} vs ${info.team2.teamName}</b>
+<br>${info.status}
 </div>
 `
 
@@ -128,21 +171,22 @@ ${info.status}
 
 document.getElementById("matches").innerHTML=html
 
-}catch(e){
+}
 
-document.getElementById("matches").innerHTML="Failed to load matches"
+async function loadMatch(id){
+
+const score=await api(`/mcenter/v1/${id}/hscard`)
+const overs=await api(`/mcenter/v1/${id}/overs`)
+
+if(!score) return
+
+renderScore(score)
+renderRunRate(overs)
+renderPhases(overs)
 
 }
 
-}
-
-async function loadScorecard(id){
-
-document.getElementById("header").innerHTML="Loading scorecard..."
-
-try{
-
-const data=await api("/mcenter/v1/"+id+"/hscard")
+function renderScore(data){
 
 const header=data.matchHeader
 
@@ -164,6 +208,7 @@ html+=`
 <th>Balls</th>
 <th>4s</th>
 <th>6s</th>
+<th>SR</th>
 </tr>
 `
 
@@ -176,6 +221,7 @@ html+=`
 <td>${b.balls}</td>
 <td>${b.fours}</td>
 <td>${b.sixes}</td>
+<td>${b.strikeRate}</td>
 </tr>
 `
 
@@ -185,13 +231,65 @@ html+="</table>"
 
 })
 
-document.getElementById("header").innerHTML=html
-
-}catch(e){
-
-document.getElementById("header").innerHTML="Scorecard unavailable"
+document.getElementById("scorecard").innerHTML=html
 
 }
+
+function renderRunRate(overs){
+
+if(!overs || !overs.overSummaryList) return
+
+const oversData=overs.overSummaryList
+
+let runs=[]
+let labels=[]
+
+oversData.forEach(o=>{
+runs.push(o.runs)
+labels.push("Over "+o.overNum)
+})
+
+const ctx=document.getElementById("runrateChart")
+
+new Chart(ctx,{
+type:"line",
+data:{
+labels:labels,
+datasets:[{
+label:"Runs per Over",
+data:runs,
+borderColor:"#f4b942",
+backgroundColor:"rgba(244,185,66,.2)"
+}]
+},
+options:{
+plugins:{legend:{labels:{color:"#fff"}}},
+scales:{
+x:{ticks:{color:"#fff"}},
+y:{ticks:{color:"#fff"}}
+}
+}
+})
+
+}
+
+function renderPhases(overs){
+
+if(!overs || !overs.overSummaryList) return
+
+let pp=0, mid=0, death=0
+
+overs.overSummaryList.forEach(o=>{
+
+if(o.overNum<=6) pp+=o.runs
+else if(o.overNum<=15) mid+=o.runs
+else death+=o.runs
+
+})
+
+document.getElementById("powerplay").innerHTML="Powerplay<br>"+pp+" runs"
+document.getElementById("middle").innerHTML="Middle<br>"+mid+" runs"
+document.getElementById("death").innerHTML="Death<br>"+death+" runs"
 
 }
 
