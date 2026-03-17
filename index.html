@@ -2,7 +2,7 @@
 <html>
 <head>
 
-<title>CricViz Style Match Dashboard</title>
+<title>CricViz Match Dashboard</title>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
@@ -11,7 +11,7 @@
 body{
 background:#0b1220;
 color:white;
-font-family:system-ui;
+font-family:Arial;
 margin:0;
 }
 
@@ -19,7 +19,7 @@ header{
 padding:20px;
 font-size:26px;
 font-weight:bold;
-color:#ffcc66;
+color:#ffc857;
 }
 
 .container{
@@ -36,14 +36,14 @@ padding:20px;
 
 .match{
 padding:12px;
-border-radius:8px;
-margin-bottom:10px;
+border-radius:10px;
+margin-bottom:12px;
+background:#1b2644;
 cursor:pointer;
-background:#18233b;
 }
 
 .match:hover{
-background:#24365c;
+background:#2a3a66;
 }
 
 .main{
@@ -53,14 +53,10 @@ overflow:auto;
 }
 
 .section{
-margin-bottom:30px;
+margin-bottom:40px;
 }
 
-.chart{
-height:300px;
-}
-
-.scorecard{
+.scorecards{
 display:flex;
 gap:40px;
 }
@@ -78,15 +74,15 @@ border-bottom:1px solid #2a3554;
 .phase{
 display:flex;
 gap:20px;
-margin-top:20px;
 }
 
 .phaseBox{
-background:#18233b;
-padding:15px;
+background:#1b2644;
+padding:20px;
 border-radius:10px;
 flex:1;
 text-align:center;
+font-size:18px;
 }
 
 </style>
@@ -95,32 +91,28 @@ text-align:center;
 
 <body>
 
-<header>
-🏏 CricViz Style Match Dashboard
-</header>
+<header>🏏 CricViz Style Match Dashboard</header>
 
 <div class="container">
 
 <div class="sidebar" id="matches">
-
 Loading matches...
-
 </div>
 
 <div class="main">
 
-<div id="matchTitle"></div>
+<h2 id="matchTitle"></h2>
 
-<div class="section scorecard">
+<div class="section scorecards">
 
 <div>
 <h3>Team 1</h3>
-<table id="bat1"></table>
+<table id="team1"></table>
 </div>
 
 <div>
 <h3>Team 2</h3>
-<table id="bat2"></table>
+<table id="team2"></table>
 </div>
 
 </div>
@@ -128,7 +120,7 @@ Loading matches...
 <div class="section">
 
 <h3>Run Progression</h3>
-<div id="worm" class="chart"></div>
+<div id="worm"></div>
 
 </div>
 
@@ -137,11 +129,9 @@ Loading matches...
 <h3>Phase Scoring</h3>
 
 <div class="phase">
-
-<div class="phaseBox" id="powerplay"></div>
+<div class="phaseBox" id="power"></div>
 <div class="phaseBox" id="middle"></div>
 <div class="phaseBox" id="death"></div>
-
 </div>
 
 </div>
@@ -188,7 +178,6 @@ container.innerHTML=""
 matches.forEach(m=>{
 
 const div=document.createElement("div")
-
 div.className="match"
 
 div.innerHTML=`
@@ -210,27 +199,31 @@ async function loadMatch(matchId){
 
 const data=await api(`/mcenter/v1/${matchId}/scard`)
 
+const team1=data.matchHeader.team1.name
+const team2=data.matchHeader.team2.name
+
+document.getElementById("matchTitle").innerText=`${team1} vs ${team2}`
+
 const innings=data.scoreCard
 
-document.getElementById("matchTitle").innerHTML=`<h2>${data.matchHeader.team1.name} vs ${data.matchHeader.team2.name}</h2>`
-
-renderBatting(innings[0], "bat1")
-renderBatting(innings[1], "bat2")
+renderBatting(innings[0],"team1")
+renderBatting(innings[1],"team2")
 
 renderWorm(innings)
 
-renderPhaseStats(innings)
+renderPhase(innings)
 
 }
 
-function renderBatting(inn, id){
+function renderBatting(inn,id){
 
 const table=document.getElementById(id)
 
-table.innerHTML="<tr><th>Player</th><th>R</th><th>B</th></tr>"
+table.innerHTML="<tr><th>Player</th><th>Runs</th><th>Balls</th></tr>"
 
-inn.batTeamDetails.batsmenData &&
-Object.values(inn.batTeamDetails.batsmenData).forEach(p=>{
+const players=inn.batTeamDetails.batsmenData
+
+Object.values(players).forEach(p=>{
 
 table.innerHTML+=`
 <tr>
@@ -246,26 +239,23 @@ table.innerHTML+=`
 
 function renderWorm(innings){
 
-const runs=[]
-
-innings.forEach(i=>{
-runs.push(i.scoreDetails.runs)
-})
+const runs=innings.map(i=>i.scoreDetails.runs)
 
 Plotly.newPlot("worm",[{
 y:runs,
 type:"scatter",
 mode:"lines+markers",
-line:{color:"#ffcc66"}
+line:{color:"#ffc857"}
 }],
-{paper_bgcolor:"#0b1220",
+{
+paper_bgcolor:"#0b1220",
 plot_bgcolor:"#0b1220",
 font:{color:"white"}
 })
 
 }
 
-function renderPhaseStats(innings){
+function renderPhase(innings){
 
 let power=0
 let middle=0
@@ -273,17 +263,18 @@ let death=0
 
 innings.forEach(i=>{
 
+const runs=i.scoreDetails.runs
 const overs=i.scoreDetails.overs
 
-if(overs<=6) power+=i.scoreDetails.runs
-else if(overs<=15) middle+=i.scoreDetails.runs
-else death+=i.scoreDetails.runs
+if(overs<=6) power+=runs
+else if(overs<=15) middle+=runs
+else death+=runs
 
 })
 
-document.getElementById("powerplay").innerHTML=`Powerplay<br><b>${power}</b>`
-document.getElementById("middle").innerHTML=`Middle<br><b>${middle}</b>`
-document.getElementById("death").innerHTML=`Death<br><b>${death}</b>`
+document.getElementById("power").innerHTML=`Powerplay<br><b>${power}</b>`
+document.getElementById("middle").innerHTML=`Middle Overs<br><b>${middle}</b>`
+document.getElementById("death").innerHTML=`Death Overs<br><b>${death}</b>`
 
 }
 
