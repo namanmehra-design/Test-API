@@ -2,46 +2,64 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CricViz Shadow Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CricViz Shadow Dashboard - Final</title>
     <style>
-        body { background:#0b1220; color:white; font-family: 'DM Sans', sans-serif; margin:0; }
-        header { padding:20px; font-size:24px; font-weight:bold; color:#ffc857; border-bottom: 1px solid #1b2644; display: flex; justify-content: space-between; align-items: center; }
-        .container { display:flex; height:90vh; }
-        .sidebar { width:320px; background:#111a2e; overflow-y:auto; padding:20px; border-right: 1px solid #1b2644; }
-        .match-card { padding:15px; border-radius:10px; margin-bottom:12px; background:#1b2644; cursor:pointer; border: 1px solid transparent; }
-        .match-card.active { border-color: #ffc857; background: #2a3a66; }
-        .main { flex:1; padding:25px; overflow:auto; }
-        .stat-hi { color: #10B981; font-weight: bold; }
-        .badge-motm { background: #ffc857; color: #000; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 13px; margin-bottom: 20px; display: inline-block; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: rgba(0,0,0,0.1); }
-        th, td { padding: 12px; border-bottom: 1px solid #2a3554; text-align: left; font-size: 14px; }
-        th { color: #888; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        :root { --gold: #ffc857; --bg: #0b1220; --card: #111a2e; --active: #1b2644; --txt: #ffffff; --green: #10B981; --border: #2a3554; }
+        body { background: var(--bg); color: var(--txt); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { padding: 15px 25px; background: var(--card); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .logo { font-size: 22px; font-weight: bold; color: var(--gold); }
+        .status-dot { height: 10px; width: 10px; background-color: var(--green); border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 300px; background: var(--card); border-right: 1px solid var(--border); overflow-y: auto; padding: 15px; }
+        .match-card { padding: 15px; border-radius: 8px; background: var(--active); margin-bottom: 12px; cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
+        .match-card:hover { transform: translateY(-2px); background: #253355; }
+        .match-card.active { border-color: var(--gold); background: #2a3a66; }
+        .match-card b { display: block; margin-bottom: 5px; color: var(--gold); }
+        .match-card small { color: #aaa; font-size: 12px; }
+        .main { flex: 1; padding: 30px; overflow-y: auto; background: var(--bg); }
+        .badge-motm { background: rgba(255, 200, 87, 0.15); color: var(--gold); padding: 8px 15px; border-radius: 5px; border: 1px solid var(--gold); font-weight: bold; margin-bottom: 25px; display: inline-block; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; margin-top: 10px; }
+        th { background: rgba(255,255,255,0.05); color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .stat-hi { color: var(--green); font-weight: bold; }
+        h2 { margin-top: 0; font-size: 28px; }
+        h3 { border-left: 4px solid var(--gold); padding-left: 10px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
 <header>
-    <span>🏏 CricViz Live Scorecard</span>
-    <span id="syncStatus" style="font-size: 12px; color: #10B981;">● Connected</span>
+    <div class="logo">🏏 CricViz Shadow Dashboard</div>
+    <div style="font-size: 13px;"><span class="status-dot"></span> <span id="syncText">Cloudflare Synced</span></div>
 </header>
 
 <div class="container">
-    <div class="sidebar" id="sideMatchList">Loading matches...</div>
-    <div class="main">
+    <div class="sidebar" id="sideMatchList">
+        <p style="color: #666;">Scanning for live matches...</p>
+    </div>
+    
+    <div class="main" id="mainDisplay">
         <div id="motmSlot"></div>
-        <h2 id="displayTitle">Initializing Scoreboard...</h2>
+        <h2 id="displayTitle">Select a match to begin</h2>
         
         <div id="dashboardContent" style="display:none;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                <div><h3>Batting Performance</h3><table id="batTable"></table></div>
-                <div><h3>Bowling & Dot Balls</h3><table id="bowlTable"></table></div>
+            <div class="grid">
+                <div>
+                    <h3>Batting Performance</h3>
+                    <table id="batTable"></table>
+                </div>
+                <div>
+                    <h3>Bowling & Dot Balls</h3>
+                    <table id="bowlTable"></table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// Pointing to your verified Cloudflare Worker
 const WORKER_URL = "https://cricbuzz.namanmehra.workers.dev";
 
 async function callAPI(path) {
@@ -53,55 +71,92 @@ async function startDashboard() {
     try {
         const liveData = await callAPI("/matches/v1/live");
         let allMatches = [];
-        liveData.typeMatches.forEach(t => t.seriesMatches?.forEach(s => s.seriesAdWrapper?.matches?.forEach(m => allMatches.push(m))));
+        
+        // Flatten the data structure from the API
+        liveData.typeMatches.forEach(t => {
+            t.seriesMatches?.forEach(s => {
+                s.seriesAdWrapper?.matches?.forEach(m => allMatches.push(m));
+            });
+        });
         
         const sidebar = document.getElementById("sideMatchList");
+        if (allMatches.length === 0) {
+            sidebar.innerHTML = "<p>No matches live at the moment.</p>";
+            return;
+        }
+
         sidebar.innerHTML = allMatches.map(m => `
             <div class="match-card" id="match_${m.matchInfo.matchId}" onclick="autoPopulate(${m.matchInfo.matchId})">
-                <b>${m.matchInfo.team1.teamName} vs ${m.matchInfo.team2.teamName}</b><br>
-                <small style="color:#aaa">${m.matchInfo.status}</small>
+                <b>${m.matchInfo.team1.teamName} vs ${m.matchInfo.team2.teamName}</b>
+                <small>${m.matchInfo.status}</small>
             </div>
         `).join('');
 
-        // AUTO-POPULATE: Immediately load the first match in the list
-        if (allMatches.length > 0) autoPopulate(allMatches[0].matchInfo.matchId);
+        // Automatically load the first match found in the list
+        autoPopulate(allMatches[0].matchInfo.matchId);
 
     } catch (err) {
-        document.getElementById("sideMatchList").innerText = "Failed to sync live matches.";
+        document.getElementById("sideMatchList").innerHTML = "<p style='color:red;'>Worker connection failed.</p>";
+        console.error("Dashboard Error:", err);
     }
 }
 
 async function autoPopulate(matchId) {
-    // UI selection state
+    // UI state management
     document.querySelectorAll('.match-card').forEach(el => el.classList.remove('active'));
     document.getElementById(`match_${matchId}`)?.classList.add('active');
 
-    const data = await callAPI(`/mcenter/v1/${matchId}/hscard`);
-    document.getElementById("dashboardContent").style.display = "block";
-    document.getElementById("displayTitle").innerText = data.matchHeader.matchDescription;
+    try {
+        const data = await callAPI(`/mcenter/v1/${matchId}/hscard`);
+        
+        // Handle cases where scorecard hasn't started yet
+        if (!data.scoreCard || data.scoreCard.length === 0) {
+            document.getElementById("displayTitle").innerText = data.matchHeader.matchDescription;
+            document.getElementById("motmSlot").innerHTML = "";
+            document.getElementById("dashboardContent").style.display = "none";
+            document.getElementById("syncText").innerText = "Data Pending...";
+            return;
+        }
 
-    // Man of the Match
-    const motm = data.matchHeader.playersOfTheMatch?.[0]?.name || "Match In Progress";
-    document.getElementById("motmSlot").innerHTML = `<div class="badge-motm">🏆 PLAYER OF THE MATCH: ${motm}</div>`;
+        document.getElementById("dashboardContent").style.display = "block";
+        document.getElementById("displayTitle").innerText = data.matchHeader.matchDescription;
 
-    // Render Innings 1 Batting
-    const batsmen = Object.values(data.scoreCard[0].batTeamDetails.batsmenData);
-    let batRows = `<tr><th>Player</th><th>Runs</th><th>Balls</th><th>6s</th><th>SR</th></tr>`;
-    batsmen.forEach(p => {
-        batRows += `<tr><td>${p.batName}</td><td class="stat-hi">${p.runs}</td><td>${p.balls}</td><td>${p.sixes}</td><td>${p.strikeRate}</td></tr>`;
-    });
-    document.getElementById("batTable").innerHTML = batRows;
+        // Player of the Match logic
+        const motm = data.matchHeader.playersOfTheMatch?.[0]?.name || "In Progress";
+        document.getElementById("motmSlot").innerHTML = `<div class="badge-motm">🏆 PLAYER OF THE MATCH: ${motm}</div>`;
 
-    // Render Innings 1 Bowling (Including requested Dot Ball field)
-    const bowlers = Object.values(data.scoreCard[0].bowTeamDetails.bowlersData);
-    let bowlRows = `<tr><th>Bowler</th><th>Overs</th><th>Wkts</th><th>Dots (0s)</th><th>Econ</th></tr>`;
-    bowlers.forEach(b => {
-        bowlRows += `<tr><td>${b.bowlerName}</td><td>${b.overs}</td><td class="stat-hi">${b.wickets}</td><td style="color:#ffc857">${b.dots || 0}</td><td>${b.economy}</td></tr>`;
-    });
-    document.getElementById("bowlTable").innerHTML = bowlRows;
+        // Logic to always pull the LATEST live innings
+        const currentInn = data.scoreCard[data.scoreCard.length - 1]; 
+        
+        // Render Batting
+        const batsmen = Object.values(currentInn.batTeamDetails.batsmenData);
+        let batRows = `<tr><th>Batsman</th><th>R</th><th>B</th><th>6s</th><th>SR</th></tr>`;
+        batsmen.forEach(p => {
+            batRows += `<tr><td>${p.batName}</td><td class="stat-hi">${p.runs}</td><td>${p.balls}</td><td>${p.sixes}</td><td>${p.strikeRate}</td></tr>`;
+        });
+        document.getElementById("batTable").innerHTML = batRows;
+
+        // Render Bowling (Pulling the 'dots' field you requested)
+        const bowlers = Object.values(currentInn.bowTeamDetails.bowlersData);
+        let bowlRows = `<tr><th>Bowler</th><th>O</th><th>W</th><th>Dots</th><th>Econ</th></tr>`;
+        bowlers.forEach(b => {
+            bowlRows += `<tr><td>${b.bowlerName}</td><td>${b.overs}</td><td class="stat-hi">${b.wickets}</td><td style="color:#ffc857">${b.dots || 0}</td><td>${b.economy}</td></tr>`;
+        });
+        document.getElementById("bowlTable").innerHTML = bowlRows;
+        
+        document.getElementById("syncText").innerText = "Cloudflare Synced";
+
+    } catch (e) {
+        console.error("Scorecard Update Error:", e);
+    }
 }
 
+// Initialize the dashboard on page load
 startDashboard();
+
+// Auto-refresh logic (Every 60 seconds)
+setInterval(startDashboard, 60000);
 </script>
+
 </body>
 </html>
