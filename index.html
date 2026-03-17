@@ -1,291 +1,568 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>CricViz Analytics Dashboard</title>
-
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-
-<style>
-
-body{
-font-family:system-ui;
-margin:0;
-background:#0b1423;
-color:white;
-}
-
-header{
-padding:20px;
-font-size:24px;
-font-weight:600;
-border-bottom:1px solid #1f2a44;
-}
-
-.container{
-display:flex;
-height:calc(100vh - 70px);
-}
-
-.sidebar{
-width:320px;
-background:#0f1b2f;
-overflow:auto;
-border-right:1px solid #1f2a44;
-}
-
-.match{
-padding:14px;
-border-bottom:1px solid #1c2740;
-cursor:pointer;
-}
-
-.match:hover{
-background:#182746;
-}
-
-.main{
-flex:1;
-padding:25px;
-overflow:auto;
-}
-
-.tabs{
-margin-bottom:20px;
-}
-
-button{
-margin-right:8px;
-padding:8px 14px;
-background:#1b2a4a;
-color:white;
-border:none;
-border-radius:6px;
-cursor:pointer;
-}
-
-button:hover{
-background:#294072;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:15px;
-}
-
-th,td{
-padding:8px;
-border-bottom:1px solid #1f2a44;
-}
-
-.section{
-margin-top:30px;
-}
-
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CricViz Analytics Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    :root{
+      --bg:#0b1423;
+      --panel:#0f1b2f;
+      --panel-2:#13213a;
+      --line:#1f2a44;
+      --text:#eef2f7;
+      --muted:#9fb0c8;
+      --gold:#ffc857;
+      --green:#10b981;
+      --red:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:20px 18px;
+      font-size:24px;
+      font-weight:700;
+      color:var(--gold);
+      border-bottom:1px solid var(--line);
+    }
+    .app{
+      display:flex;
+      min-height:calc(100vh - 72px);
+    }
+    .sidebar{
+      width:320px;
+      background:var(--panel);
+      border-right:1px solid var(--line);
+      overflow:auto;
+      flex-shrink:0;
+    }
+    .sidebar-top{
+      position:sticky;
+      top:0;
+      background:var(--panel);
+      padding:14px;
+      border-bottom:1px solid var(--line);
+      z-index:2;
+    }
+    .tab-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .tab-btn{
+      border:none;
+      background:#1a2948;
+      color:#fff;
+      padding:8px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .tab-btn.active{
+      background:#27406f;
+      color:var(--gold);
+    }
+    .status{
+      margin-top:10px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .matches{
+      padding:0;
+    }
+    .match{
+      padding:14px;
+      border-bottom:1px solid var(--line);
+      cursor:pointer;
+      transition:background .15s ease;
+    }
+    .match:hover{ background:#182746; }
+    .match.active{
+      background:#22365f;
+      outline:1px solid rgba(255,200,87,.35);
+    }
+    .match-title{
+      font-weight:700;
+      line-height:1.2;
+      margin-bottom:6px;
+    }
+    .match-sub{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.25;
+    }
+    .main{
+      flex:1;
+      padding:22px;
+      overflow:auto;
+    }
+    .hero{
+      margin-bottom:18px;
+    }
+    .hero h2{
+      margin:0 0 6px 0;
+      font-size:20px;
+    }
+    .hero .sub{
+      color:var(--muted);
+      font-size:14px;
+    }
+    .grid{
+      display:grid;
+      gap:18px;
+    }
+    .grid-2{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:16px;
+    }
+    .card h3{
+      margin:0 0 12px 0;
+      font-size:15px;
+      color:var(--text);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    th,td{
+      padding:9px 8px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{
+      color:var(--gold);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+    }
+    .kpi{
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:14px;
+      text-align:center;
+    }
+    .kpi .label{
+      color:var(--muted);
+      font-size:13px;
+      margin-bottom:6px;
+    }
+    .kpi .value{
+      font-size:24px;
+      font-weight:700;
+      color:var(--gold);
+    }
+    .msg{
+      color:var(--muted);
+      font-size:14px;
+      padding:8px 0;
+    }
+    .error{
+      color:#fecaca;
+    }
+    .success{
+      color:#bbf7d0;
+    }
+    @media (max-width: 1000px){
+      .app{ flex-direction:column; }
+      .sidebar{ width:100%; max-height:40vh; }
+      .grid-2{ grid-template-columns:1fr; }
+      .kpis{ grid-template-columns:1fr; }
+    }
+  </style>
 </head>
-
 <body>
-
-<header>
-🏏 CricViz Analytics Dashboard
-</header>
-
-<div class="container">
-
-<div class="sidebar">
-<div class="tabs">
-<button onclick="loadMatches('live')">Live</button>
-<button onclick="loadMatches('upcoming')">Upcoming</button>
-<button onclick="loadMatches('recent')">Recent</button>
-</div>
-
-<div id="matches"></div>
-</div>
-
-<div class="main">
-
-<h2 id="matchTitle">Select a match</h2>
-
-<div class="section">
-<h3>Batting</h3>
-<table id="batTable"></table>
-</div>
-
-<div class="section">
-<h3>Bowling</h3>
-<table id="bowlTable"></table>
-</div>
-
-<div class="section">
-<h3>Run Progression</h3>
-<div id="wormChart"></div>
-</div>
-
-</div>
-</div>
-
-<script>
-
-/* API HELPER */
-
-const API="https://cricbuzz.namanmehra.workers.dev"
-
-async function api(endpoint){
-const res=await fetch(`${API}?endpoint=${encodeURIComponent(endpoint)}`)
-return await res.json()
-}
-
-
-/* LOAD MATCHES */
-
-async function loadMatches(type){
-
-const data=await api(`/matches/v1/${type}`)
-
-const container=document.getElementById("matches")
-container.innerHTML=""
-
-data.typeMatches.forEach(type=>{
-type.seriesMatches.forEach(series=>{
-
-if(series.seriesAdWrapper && series.seriesAdWrapper.matches){
-
-series.seriesAdWrapper.matches.forEach(match=>{
-
-const info=match.matchInfo
-
-const card=document.createElement("div")
-card.className="match"
-
-card.innerHTML=`
-<b>${info.team1.teamName} vs ${info.team2.teamName}</b><br>
-${info.status}
-`
-
-card.onclick=()=>loadMatch(info.matchId)
-
-container.appendChild(card)
-
-})
-
-}
-
-})
-})
-
-}
-
-
-/* LOAD MATCH */
-
-async function loadMatch(matchId){
-
-const header=await api(`/mcenter/v1/${matchId}`)
-const score=await api(`/mcenter/v1/${matchId}/hscard`)
-const overs=await api(`/mcenter/v1/${matchId}/overs`)
-
-renderHeader(header)
-renderBatting(score)
-renderBowling(score)
-renderOvers(overs)
-
-}
-
-
-/* HEADER */
-
-function renderHeader(data){
-
-const title=document.getElementById("matchTitle")
-
-title.innerHTML=`
-${data.matchHeader.team1.name} vs ${data.matchHeader.team2.name}
-<br>
-<small>${data.matchHeader.status}</small>
-`
-
-}
-
-
-/* BATTING */
-
-function renderBatting(data){
-
-const table=document.getElementById("batTable")
-
-table.innerHTML="<tr><th>Player</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th></tr>"
-
-Object.values(data.scoreCard[0].batTeamDetails.batsmenData).forEach(b=>{
-
-table.innerHTML+=`
-<tr>
-<td>${b.batName}</td>
-<td>${b.runs}</td>
-<td>${b.balls}</td>
-<td>${b.fours}</td>
-<td>${b.sixes}</td>
-</tr>
-`
-
-})
-
-}
-
-
-/* BOWLING */
-
-function renderBowling(data){
-
-const table=document.getElementById("bowlTable")
-
-table.innerHTML="<tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th></tr>"
-
-Object.values(data.scoreCard[0].bowlTeamDetails.bowlersData).forEach(b=>{
-
-table.innerHTML+=`
-<tr>
-<td>${b.bowlName}</td>
-<td>${b.overs}</td>
-<td>${b.runs}</td>
-<td>${b.wickets}</td>
-</tr>
-`
-
-})
-
-}
-
-
-/* OVERS PROGRESSION */
-
-function renderOvers(data){
-
-if(!data.overSummary) return
-
-let runs=[]
-let total=0
-
-data.overSummary.forEach(o=>{
-total+=o.runs
-runs.push(total)
-})
-
-Plotly.newPlot("wormChart",[{
-y:runs,
-mode:"lines",
-type:"scatter"
-}])
-
-}
-
-
-/* INITIAL LOAD */
-
-loadMatches("live")
-
-</script>
-
+  <header>🏏 CricViz Analytics Dashboard</header>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="tab-row">
+          <button class="tab-btn active" data-type="live">Live</button>
+          <button class="tab-btn" data-type="upcoming">Upcoming</button>
+          <button class="tab-btn" data-type="recent">Recent</button>
+        </div>
+        <div id="sidebarStatus" class="status">Loading matches...</div>
+      </div>
+      <div id="matches" class="matches"></div>
+    </aside>
+
+    <main class="main">
+      <div class="hero">
+        <h2 id="matchTitle">Select a match</h2>
+        <div id="matchSub" class="sub">Choose a match from the left to load the scoreboard.</div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Phase Scoring</h3>
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Powerplay</div>
+              <div id="powerValue" class="value">-</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Middle</div>
+              <div id="middleValue" class="value">-</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Death</div>
+              <div id="deathValue" class="value">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Run Progression</h3>
+          <div id="wormChart" style="height:320px;"></div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>Batting</h3>
+            <table id="batTable"></table>
+          </div>
+
+          <div class="card">
+            <h3>Bowling</h3>
+            <table id="bowlTable"></table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API = "https://cricbuzz.namanmehra.workers.dev";
+    let currentMatchId = null;
+    let currentType = "live";
+
+    async function api(endpoint) {
+      const res = await fetch(`${API}?endpoint=${encodeURIComponent(endpoint)}`);
+      if (!res.ok) throw new Error(`API failed: ${res.status}`);
+      return await res.json();
+    }
+
+    function setSidebarStatus(text, cls = "") {
+      const el = document.getElementById("sidebarStatus");
+      el.className = "status " + cls;
+      el.textContent = text;
+    }
+
+    function safe(obj, path, fallback = null) {
+      try {
+        return path.split(".").reduce((acc, key) => acc?.[key], obj) ?? fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function flattenMatches(data) {
+      const out = [];
+      (data?.typeMatches || []).forEach(typeBlock => {
+        (typeBlock?.seriesMatches || []).forEach(series => {
+          const seriesWrap = series?.seriesAdWrapper;
+          const seriesName = seriesWrap?.seriesName || "";
+          (seriesWrap?.matches || []).forEach(match => {
+            const info = match?.matchInfo || {};
+            out.push({
+              matchId: info.matchId,
+              title: `${info?.team1?.teamName || "Team 1"} vs ${info?.team2?.teamName || "Team 2"}`,
+              status: info?.status || "",
+              seriesName
+            });
+          });
+        });
+      });
+      return out;
+    }
+
+    async function loadMatches(type) {
+      currentType = type;
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.type === type);
+      });
+
+      const container = document.getElementById("matches");
+      container.innerHTML = "";
+      setSidebarStatus(`Loading ${type} matches...`);
+
+      try {
+        const data = await api(`/matches/v1/${type}`);
+        const matches = flattenMatches(data);
+
+        if (!matches.length) {
+          setSidebarStatus(`No ${type} matches found.`, "error");
+          return;
+        }
+
+        setSidebarStatus(`${matches.length} ${type} matches loaded.`, "success");
+
+        matches.forEach(m => {
+          const div = document.createElement("div");
+          div.className = "match" + (String(m.matchId) === String(currentMatchId) ? " active" : "");
+          div.innerHTML = `
+            <div class="match-title">${m.title}</div>
+            <div class="match-sub">${m.status}</div>
+          `;
+          div.onclick = () => loadMatch(m.matchId);
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error(err);
+        setSidebarStatus(`Failed to load matches: ${err.message}`, "error");
+      }
+    }
+
+    async function loadMatch(matchId) {
+      currentMatchId = matchId;
+      document.querySelectorAll(".match").forEach(card => card.classList.remove("active"));
+
+      const titleEl = document.getElementById("matchTitle");
+      const subEl = document.getElementById("matchSub");
+      titleEl.textContent = "Loading...";
+      subEl.textContent = "Fetching match data...";
+
+      clearTables();
+      clearKPIs();
+      clearChart("Loading chart...");
+
+      const [headerRes, scoreRes, oversRes] = await Promise.allSettled([
+        api(`/mcenter/v1/${matchId}`),
+        api(`/mcenter/v1/${matchId}/hscard`),
+        api(`/mcenter/v1/${matchId}/overs`)
+      ]);
+
+      const header = headerRes.status === "fulfilled" ? headerRes.value : null;
+      const score = scoreRes.status === "fulfilled" ? scoreRes.value : null;
+      const overs = oversRes.status === "fulfilled" ? oversRes.value : null;
+
+      if (!header && !score) {
+        titleEl.textContent = "Unable to load this match";
+        subEl.textContent = "This match did not return usable data.";
+        renderMessage("batTable", "No batting data available.");
+        renderMessage("bowlTable", "No bowling data available.");
+        clearChart("No over progression available.");
+        return;
+      }
+
+      renderHeader(header, score);
+      renderBatting(score);
+      renderBowling(score);
+      renderOvers(overs);
+      renderPhase(overs, score);
+
+      loadMatches(currentType);
+    }
+
+    function renderHeader(header, score) {
+      const titleEl = document.getElementById("matchTitle");
+      const subEl = document.getElementById("matchSub");
+
+      const team1 =
+        safe(header, "matchHeader.team1.name") ||
+        safe(score, "matchHeader.team1.name") ||
+        "Team 1";
+
+      const team2 =
+        safe(header, "matchHeader.team2.name") ||
+        safe(score, "matchHeader.team2.name") ||
+        "Team 2";
+
+      const status =
+        safe(header, "matchHeader.status") ||
+        safe(score, "matchHeader.status") ||
+        "";
+
+      const venue =
+        safe(header, "matchHeader.venueInfo.ground") ||
+        safe(score, "matchHeader.venue.name") ||
+        "";
+
+      titleEl.innerHTML = `${team1} vs ${team2}`;
+      subEl.innerHTML = [status, venue].filter(Boolean).join(" • ");
+    }
+
+    function clearTables() {
+      document.getElementById("batTable").innerHTML = "";
+      document.getElementById("bowlTable").innerHTML = "";
+    }
+
+    function clearKPIs() {
+      document.getElementById("powerValue").textContent = "-";
+      document.getElementById("middleValue").textContent = "-";
+      document.getElementById("deathValue").textContent = "-";
+    }
+
+    function clearChart(message = "") {
+      const chartDiv = document.getElementById("wormChart");
+      chartDiv.innerHTML = `<div class="msg">${message}</div>`;
+    }
+
+    function renderMessage(tableId, message) {
+      document.getElementById(tableId).innerHTML = `<tr><td class="msg">${message}</td></tr>`;
+    }
+
+    function renderBatting(score) {
+      const table = document.getElementById("batTable");
+      const batsmen =
+        safe(score, "scoreCard.0.batTeamDetails.batsmenData") ||
+        safe(score, "scoreCard.1.batTeamDetails.batsmenData");
+
+      if (!batsmen) {
+        renderMessage("batTable", "No batting data available.");
+        return;
+      }
+
+      table.innerHTML = `
+        <tr>
+          <th>Player</th>
+          <th>Runs</th>
+          <th>Balls</th>
+          <th>4s</th>
+          <th>6s</th>
+        </tr>
+      `;
+
+      Object.values(batsmen).forEach(b => {
+        table.innerHTML += `
+          <tr>
+            <td>${b?.batName || ""}</td>
+            <td>${b?.runs ?? ""}</td>
+            <td>${b?.balls ?? ""}</td>
+            <td>${b?.fours ?? ""}</td>
+            <td>${b?.sixes ?? ""}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderBowling(score) {
+      const table = document.getElementById("bowlTable");
+      const bowlers =
+        safe(score, "scoreCard.0.bowTeamDetails.bowlersData") ||
+        safe(score, "scoreCard.1.bowTeamDetails.bowlersData");
+
+      if (!bowlers) {
+        renderMessage("bowlTable", "No bowling data available.");
+        return;
+      }
+
+      table.innerHTML = `
+        <tr>
+          <th>Bowler</th>
+          <th>Overs</th>
+          <th>Runs</th>
+          <th>Wickets</th>
+          <th>Dots</th>
+        </tr>
+      `;
+
+      Object.values(bowlers).forEach(b => {
+        table.innerHTML += `
+          <tr>
+            <td>${b?.bowlerName || b?.bowlName || ""}</td>
+            <td>${b?.overs ?? ""}</td>
+            <td>${b?.runs ?? ""}</td>
+            <td>${b?.wickets ?? ""}</td>
+            <td>${b?.dots ?? ""}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderOvers(overs) {
+      const chartDiv = document.getElementById("wormChart");
+      const summary =
+        overs?.overSummary ||
+        overs?.overSummaryList ||
+        overs?.overs ||
+        [];
+
+      if (!summary.length) {
+        clearChart("No over progression available.");
+        return;
+      }
+
+      let total = 0;
+      const y = summary.map(o => {
+        total += Number(o?.runs || 0);
+        return total;
+      });
+
+      const x = summary.map((o, i) => `Over ${o?.overNum ?? o?.over ?? i + 1}`);
+
+      Plotly.newPlot("wormChart", [{
+        x,
+        y,
+        type: "scatter",
+        mode: "lines+markers",
+        line: { color: "#ffc857", width: 3 },
+        marker: { size: 6 }
+      }], {
+        paper_bgcolor: "#0f1b2f",
+        plot_bgcolor: "#0f1b2f",
+        font: { color: "#eef2f7" },
+        margin: { t: 10, r: 20, b: 50, l: 40 },
+        xaxis: { gridcolor: "#1f2a44" },
+        yaxis: { gridcolor: "#1f2a44" }
+      }, { displayModeBar: false, responsive: true });
+    }
+
+    function renderPhase(overs, score) {
+      const summary =
+        overs?.overSummary ||
+        overs?.overSummaryList ||
+        [];
+
+      if (summary.length) {
+        let power = 0, middle = 0, death = 0;
+        summary.forEach((o, idx) => {
+          const overNo = Number(o?.overNum ?? o?.over ?? idx + 1);
+          const runs = Number(o?.runs || 0);
+          if (overNo <= 6) power += runs;
+          else if (overNo <= 15) middle += runs;
+          else death += runs;
+        });
+
+        document.getElementById("powerValue").textContent = power;
+        document.getElementById("middleValue").textContent = middle;
+        document.getElementById("deathValue").textContent = death;
+        return;
+      }
+
+      const innings = score?.scoreCard || [];
+      if (innings.length) {
+        const totalRuns = innings.reduce((sum, inn) => sum + Number(inn?.scoreDetails?.runs || 0), 0);
+        document.getElementById("powerValue").textContent = Math.round(totalRuns * 0.25);
+        document.getElementById("middleValue").textContent = Math.round(totalRuns * 0.45);
+        document.getElementById("deathValue").textContent = Math.round(totalRuns * 0.30);
+      }
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => loadMatches(btn.dataset.type));
+    });
+
+    loadMatches("live");
+  </script>
 </body>
 </html>
