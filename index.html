@@ -2,30 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IPL 2025 Scorecard: MI vs CSK</title>
+    <title>IPL 2025: MI vs CSK Scorecard</title>
     <style>
         :root { --gold: #D4A847; --bg: #07090F; --bg2: #0C1018; --txt: #EDE9E0; --bdr: rgba(255,255,255,0.1); }
         body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--txt); padding: 20px; }
-        .match-card { background: var(--bg2); border: 1px solid var(--bdr); border-radius: 12px; padding: 25px; max-width: 950px; margin: 0 auto; }
-        h2, h3 { color: var(--gold); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; margin-bottom: 10px; }
+        .match-card { background: var(--bg2); border: 1px solid var(--bdr); border-radius: 12px; padding: 25px; max-width: 900px; margin: 0 auto; }
+        h2, h3 { color: var(--gold); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
         .btn-fetch { background: var(--gold); border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; background: rgba(0,0,0,0.2); }
-        th { text-align: left; color: var(--gold); border-bottom: 2px solid var(--bdr); padding: 12px; font-size: 0.8rem; text-transform: uppercase; }
-        td { padding: 12px; border-bottom: 1px solid var(--bdr); font-size: 0.9rem; }
-        .out-desc { color: #9CA3AF; font-style: italic; font-size: 0.8rem; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { text-align: left; color: var(--gold); border-bottom: 2px solid var(--bdr); padding: 10px; font-size: 0.8rem; text-transform: uppercase; }
+        td { padding: 10px; border-bottom: 1px solid var(--bdr); font-size: 0.9rem; }
+        .out-desc { color: #888; font-style: italic; font-size: 0.8rem; }
         #status { margin-bottom: 15px; font-size: 0.85rem; padding: 10px; border-radius: 4px; }
-        .err-msg { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--err); color: #EF4444; }
+        .error-box { background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; padding: 10px; }
     </style>
 </head>
 <body>
 
 <div class="match-card">
     <h2>IPL 2025: MI vs CSK (Match ID: 104367)</h2>
-    <button class="btn-fetch" onclick="fetchIPLData()">Load MI vs CSK Scorecard</button>
-    <div id="status">Ready to fetch data...</div>
+    <button class="btn-fetch" onclick="fetchIPLData()">Load Match 38 Scorecard</button>
+    <div id="status">Ready.</div>
 
     <div id="data-tables" style="display:none;">
-        <h3>🏏 Batsmen Data</h3>
+        <h3>🏏 Batting Performance</h3>
         <table id="battingTable">
             <thead>
                 <tr>
@@ -35,25 +35,22 @@
                     <th>4s</th>
                     <th>6s</th>
                     <th>S/R</th>
-                    <th>Mode of Dismissal</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
 
-        <h3> bowling 🎳 Bowlers Data</h3>
+        <h3> bowling 🎳 Bowling Performance</h3>
         <table id="bowlingTable">
             <thead>
                 <tr>
                     <th>Bowler</th>
                     <th>Overs</th>
-                    <th>Mdns</th>
-                    <th>Runs</th>
-                    <th>Wkts</th>
-                    <th>Econ</th>
-                    <th>0s</th>
-                    <th>Wides</th>
-                    <th>NB</th>
+                    <th>Runs Conc.</th>
+                    <th>Wickets</th>
+                    <th>Economy</th>
+                    <th>Wides/NB</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -63,16 +60,15 @@
 
 <script>
 async function fetchIPLData() {
-    const matchId = "104367"; // MI vs CSK IPL 2025
+    const matchId = "104367"; 
     const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; 
     const status = document.getElementById('status');
-    const dataTables = document.getElementById('data-tables');
+    const tables = document.getElementById('data-tables');
     
-    status.innerText = "⚡ Requesting data from Cricbuzz...";
+    status.innerHTML = "⚡ <b>Fetching...</b>";
     status.className = "";
-    dataTables.style.display = "none";
+    tables.style.display = "none";
 
-    // Standard RapidAPI Request Options
     const options = {
         method: 'GET',
         headers: {
@@ -82,22 +78,17 @@ async function fetchIPLData() {
     };
 
     try {
-        // MUST USE HTTPS to avoid browser security pattern errors
         const response = await fetch(`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`, options);
         
-        if (!response.ok) {
-            throw new Error(`API returned ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
         const data = await response.json();
 
-        if (!data.scoreCard || data.scoreCard.length === 0) {
-            throw new Error("Scorecard data empty. Check Match ID or API subscription.");
-        }
+        if (!data.scoreCard) throw new Error("Scorecard data not available for this Match ID.");
 
-        dataTables.style.display = 'block';
+        tables.style.display = 'block';
         
-        // ── Render Batting (CSK Innings) ──
+        // --- Process Batting (CSK Innings) ---
         const batBody = document.querySelector('#battingTable tbody');
         batBody.innerHTML = '';
         const batsmen = data.scoreCard[0].batTeamDetails.batsmenData;
@@ -113,7 +104,7 @@ async function fetchIPLData() {
             </tr>`;
         });
 
-        // ── Render Bowling (MI Bowlers) ──
+        // --- Process Bowling (MI Bowlers) ---
         const bowlBody = document.querySelector('#bowlingTable tbody');
         bowlBody.innerHTML = '';
         const bowlers = data.scoreCard[0].bowTeamDetails.bowlersData;
@@ -121,25 +112,22 @@ async function fetchIPLData() {
             bowlBody.innerHTML += `<tr>
                 <td><b>${bw.bowlerName}</b></td>
                 <td>${bw.overs}</td>
-                <td>${bw.maidens}</td>
                 <td>${bw.runs}</td>
                 <td>${bw.wickets}</td>
                 <td>${bw.economy}</td>
-                <td>${bw.dots}</td>
-                <td>${bw.wides}</td>
-                <td>${bw.no_balls}</td>
+                <td>${bw.wides}/${bw.no_balls}</td>
             </tr>`;
         });
 
-        status.innerHTML = "✅ <b>Success!</b> Scorecard for MI vs CSK (Match 38) loaded.";
+        status.innerHTML = "✅ <b>Success!</b> Data loaded.";
         status.style.color = "#10B981";
+
     } catch (err) {
-        status.className = "err-msg";
-        status.innerHTML = `❌ <b>Fetch Error:</b> ${err.message}<br><small>Tip: If using Safari/Chrome, ensure you are not blocking cross-site tracking in settings.</small>`;
-        console.error("Full Error:", err);
+        status.className = "error-box";
+        status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+        console.error(err);
     }
 }
 </script>
-
 </body>
 </html>
