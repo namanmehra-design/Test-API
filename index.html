@@ -1,50 +1,141 @@
-window.syncDailyScores = async function(matchId = "104367") {
-  const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; 
-  const url = `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`;
-  
-  window.showAlert("⚡ Calculating full stats...", "info");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cricbuzz Scorecard Test Tool</title>
+    <style>
+        :root { --gold: #D4A847; --bg: #07090F; --bg2: #0C1018; --txt: #EDE9E0; --bdr: rgba(255,255,255,0.1); --ok: #10B981; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--txt); padding: 30px; }
+        .card { background: var(--bg2); border: 1px solid var(--bdr); border-radius: 12px; padding: 25px; margin-bottom: 20px; }
+        h2, h3 { color: var(--gold); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+        button { background: var(--gold); border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; color: var(--gold); font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid var(--bdr); padding: 10px; }
+        td { padding: 10px; border-bottom: 1px solid var(--bdr); font-size: 0.9rem; }
+        .dot-val { color: var(--ok); font-weight: bold; }
+        pre { background: #000; padding: 15px; border-radius: 8px; overflow-x: auto; color: #10B981; font-size: 11px; }
+    </style>
+</head>
+<body>
 
-  try {
-    const response = await fetch(url, {
-      headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com' }
-    });
-    const data = await response.json();
+    <h2>🏏 Cricbuzz Fantasy Data Tester</h2>
     
-    // --- Helper: Calculate Dot Balls ---
-    // If the API 'dots' field is missing, we calculate from the balls/boundaries logic
-    const getDotBalls = (player) => {
-      if (player.dots && player.dots > 0) return player.dots;
-      // Formula: Total Balls - (scoring shots)
-      // Note: partnership data is more accurate for this if available
-      return 0; // Placeholder: partnership logic is complex to map to individual rows
-    };
+    <div class="card">
+        <label>Match ID: </label>
+        <input type="text" id="matchId" value="40381" style="padding:8px; border-radius:4px; border:1px solid #444; background:#111; color:#fff;">
+        <button onclick="runTestFetch()">Run API Test & Calculate Dots</button>
+        <p id="status" style="margin-top:10px; font-size:0.85rem; color:#888;">Ready to fetch...</p>
+    </div>
 
-    // --- Process Innings ---
-    data.scoreCard.forEach((innings, idx) => {
-      console.log(`Processing Innings ${idx + 1}...`);
-      
-      // 🏏 BATTING DATA
-      const batsmen = innings.batTeamDetails.batsmenData;
-      Object.values(batsmen).forEach(b => {
-        // Find existing player in your Firebase/Local list or add new row
-        const dotBalls = b.balls - (b.fours + b.sixes + 5); // Rough estimation if dots field is 0
-        console.log(`${b.batName} stats: Runs: ${b.runs}, Dots (Est): ${dotBalls}`);
-      });
+    <div id="results" style="display:none;">
+        <div class="card">
+            <h3>📊 Batsman Scorecard (with Dot Ball Calculation)</h3>
+            <table id="batTable">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Runs</th>
+                        <th>Balls</th>
+                        <th>4s/6s</th>
+                        <th>SR</th>
+                        <th>Dots (Calc)</th>
+                        <th>Dismissal</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
 
-      //  bowling 🎳 BOWLING DATA
-      const bowlers = innings.bowTeamDetails.bowlersData;
-      Object.values(bowlers).forEach(bw => {
-        const actualDots = bw.dots || 0; // The JSON you shared has this field
-        console.log(`${bw.bowlerName}: Wickets: ${bw.wickets}, Dots: ${actualDots}`);
-      });
-    });
+        <div class="card">
+            <h3> bowling  bowling 🎳 Bowler Stats</h3>
+            <table id="bowlTable">
+                <thead>
+                    <tr>
+                        <th>Bowler</th>
+                        <th>Overs</th>
+                        <th>Maidens</th>
+                        <th>Runs</th>
+                        <th>Wkts</th>
+                        <th>Dots (API)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
 
-    // 🏆 MAN OF THE MATCH
-    const motm = data.matchHeader.playersOfTheMatch?.[0]?.name || "N/A";
-    console.log("MOTM:", motm);
+        <div class="card">
+            <h3>📋 Raw API Response</h3>
+            <pre id="rawOutput"></pre>
+        </div>
+    </div>
 
-    window.showAlert(`✅ Sync Successful. MOTM: ${motm}`, "ok");
-  } catch (err) {
-    window.showAlert("Sync Error: " + err.message, "err");
-  }
-};
+    <script>
+        async function runTestFetch() {
+            const mId = document.getElementById('matchId').value;
+            const status = document.getElementById('status');
+            const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; // Your provided key
+            
+            status.innerText = "⚡ Requesting data...";
+            document.getElementById('results').style.display = "none";
+
+            try {
+                const response = await fetch(`https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${mId}/hscard`, {
+                    method: 'GET',
+                    headers: {
+                        'x-rapidapi-key': apiKey,
+                        'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com'
+                    }
+                });
+
+                const data = await response.json();
+                if (!data.scoreCard) throw new Error("No scorecard in response.");
+
+                document.getElementById('rawOutput').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('results').style.display = "block";
+
+                // --- Process Batsmen ---
+                const batBody = document.querySelector('#batTable tbody');
+                batBody.innerHTML = '';
+                const batsmen = data.scoreCard[0].batTeamDetails.batsmenData;
+                
+                Object.values(batsmen).forEach(b => {
+                    // Dot Ball Calculation Logic: Balls - (scoring shots)
+                    // Simplified for this test using available fields
+                    const dots = b.balls - (b.fours + b.sixes + 5); // Placeholder formula
+
+                    batBody.innerHTML += `<tr>
+                        <td><b>${b.batName}</b></td>
+                        <td>${b.runs}</td>
+                        <td>${b.balls}</td>
+                        <td>${b.fours}/${b.sixes}</td>
+                        <td>${b.strikeRate}</td>
+                        <td class="dot-val">${dots > 0 ? dots : 0}</td>
+                        <td style="color:#888; font-style:italic;">${b.outDesc}</td>
+                    </tr>`;
+                });
+
+                // --- Process Bowlers ---
+                const bowlBody = document.querySelector('#bowlTable tbody');
+                bowlBody.innerHTML = '';
+                const bowlers = data.scoreCard[0].bowTeamDetails.bowlersData;
+                
+                Object.values(bowlers).forEach(bw => {
+                    bowlBody.innerHTML += `<tr>
+                        <td><b>${bw.bowlerName}</b></td>
+                        <td>${bw.overs}</td>
+                        <td>${bw.maidens}</td>
+                        <td>${bw.runs}</td>
+                        <td>${bw.wickets}</td>
+                        <td class="dot-val">${bw.dots || 0}</td>
+                    </tr>`;
+                });
+
+                status.innerText = "✅ Test successful. MOTM: " + (data.matchHeader?.playersOfTheMatch?.[0]?.name || "N/A");
+            } catch (err) {
+                status.innerText = "❌ Error: " + err.message;
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
