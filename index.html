@@ -1,33 +1,52 @@
-async function inspectFullScorecard(matchId) {
-    const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095";
-    const url = `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`;
+window.syncDailyScores = async function(matchId = "104367") {
+  const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; 
+  const url = `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`;
+  
+  window.showAlert("⚡ Syncing with Cricbuzz...", "info");
 
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': apiKey,
-                'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com'
-            }
-        });
-        
-        const data = await response.json();
-        
-        console.log("--- FULL API RESPONSE OBJECT ---");
-        console.log(data); // Click the arrows in Console to expand every field
-        
-        // Specifically check the first batsman's keys
-        if (data.scoreCard && data.scoreCard[0]) {
-            const firstBat = Object.values(data.scoreCard[0].batTeamDetails.batsmenData)[0];
-            console.log("Available Batsman Fields:", Object.keys(firstBat));
-            
-            const firstBowl = Object.values(data.scoreCard[0].bowTeamDetails.bowlersData)[0];
-            console.log("Available Bowler Fields:", Object.keys(firstBowl));
-        }
-    } catch (err) {
-        console.error("Fetch failed:", err);
-    }
-}
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': apiKey,
+        'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com'
+      }
+    });
 
-// Run this in your browser console (F12 > Console)
-inspectFullScorecard("104367");
+    const data = await response.json();
+    if (!data.scoreCard) throw new Error("API returned no scorecard data.");
+
+    // Map API data to your internal form structure
+    const matchLabel = data.matchHeader?.matchDescription || "IPL 2025 Match";
+    const winner = data.matchHeader?.result?.winningTeam || "";
+    
+    // Auto-populate your existing hidden form fields
+    document.getElementById('matchLabel').value = matchLabel;
+    document.getElementById('mfWinner').value = winner;
+
+    // Process Innings 1 Batting
+    const batsmen = data.scoreCard[0].batTeamDetails.batsmenData;
+    Object.values(batsmen).forEach(b => {
+      window.addBattingRow();
+      const id = battingRowCount - 1;
+      document.getElementById(`br${id}name`).value = b.batName;
+      document.getElementById(`br${id}runs`).value = b.runs;
+      document.getElementById(`br${id}balls`).value = b.balls;
+      document.getElementById(`br${id}sixes`).value = b.sixes;
+      // Map "not out" or "duck" automatically
+      const dis = b.outDesc.toLowerCase();
+      const sel = document.getElementById(`br${id}dis`);
+      if (dis.includes("not out")) sel.value = "notout";
+      else if (b.runs === 0) sel.value = "duck";
+      else sel.value = "out";
+    });
+
+    window.showAlert(`✅ Sync Complete: ${matchLabel}`, "ok");
+    // Expand the form for admin review
+    document.getElementById('matchFormBody').style.display = 'block';
+
+  } catch (err) {
+    window.showAlert(`Sync Failed: ${err.message}`, "err");
+    console.error(err);
+  }
+};
