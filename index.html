@@ -1,125 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>CricViz Universal Scorecard</title>
+    <title>Simple Scorecard Test</title>
     <style>
-        :root { --gold: #ffc857; --bg: #0b1220; --panel: #111a2e; --txt: #ffffff; --border: #2a3554; --green: #10B981; }
-        body { background: var(--bg); color: var(--txt); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        header { padding: 15px 25px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .app { display: flex; flex: 1; overflow: hidden; }
-        .sidebar { width: 320px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 15px; }
-        .match-card { padding: 15px; border-radius: 10px; background: #1b2644; margin-bottom: 12px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-        .match-card.active { border-color: var(--gold); background: #2a3a66; }
-        .main { flex: 1; padding: 30px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 30px; }
-        th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; }
-        th { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-hi { color: var(--green); font-weight: bold; }
-        .error-box { color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 8px; border: 1px solid #ef4444; margin-bottom: 20px; }
+        body { background: #111; color: white; font-family: sans-serif; padding: 20px; }
+        .match-btn { background: #333; color: #fff; padding: 10px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #222; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; }
+        th { background: #444; color: #ffc857; }
+        .loading { color: #ffc857; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<header>
-    <div style="font-size: 22px; font-weight: bold; color: var(--gold);">🏏 CricViz Universal Dashboard</div>
-    <div id="syncStatus" style="font-size: 12px; color: #888;">● Syncing...</div>
-</header>
-
-<div class="app">
-    <div class="sidebar" id="matchList">Scanning for matches...</div>
-    <div class="main">
-        <div id="errorArea"></div>
-        <h2 id="matchTitle" style="margin-top:0;">Select a Match</h2>
-        <p id="matchStatus" style="color: #888; margin-top: -10px; margin-bottom: 30px;"></p>
-        
-        <div id="tablesArea" style="display:none;">
-            <h3>Active Scorecard</h3>
-            <div id="inningsLabel" style="color: var(--gold); font-size: 12px; margin-bottom: 10px;"></div>
-            <table id="batTable"></table>
-            
-            <h3>Bowling Performance</h3>
-            <table id="bowlTable"></table>
-        </div>
+    <h2>🏏 Basic Scorecard Sync</h2>
+    <div id="status">Fetching Match List...</div>
+    <div id="matchButtons"></div>
+    
+    <div id="scorecardArea" style="display:none;">
+        <h3 id="mName"></h3>
+        <h4>Batting</h4>
+        <table id="batTable"></table>
+        <h4>Bowling</h4>
+        <table id="bowlTable"></table>
     </div>
-</div>
 
 <script>
-// Points to your verified Cloudflare Worker URL
 const WORKER = "https://cricbuzz.namanmehra.workers.dev";
 
 async function api(path) {
-    const res = await fetch(`${WORKER}?endpoint=${encodeURIComponent(path)}`);
-    if (!res.ok) throw new Error("Worker Connection Failed");
-    return await res.json();
+    const r = await fetch(`${WORKER}?endpoint=${encodeURIComponent(path)}`);
+    return await r.json();
 }
 
-async function init() {
+async function start() {
     try {
-        // MODULE 1: Live Matches List
         const data = await api("/matches/v1/live");
+        document.getElementById("status").innerText = "Click a match below:";
+        
         let matches = [];
-        data.typeMatches.forEach(t => t.seriesMatches?.forEach(s => s.seriesAdWrapper?.matches?.forEach(m => matches.push(m))));
+        data.typeMatches.forEach(t => t.seriesMatches?.forEach(s => s.seriesAdWrapper?.matches?.forEach(m => matches.push(m.matchInfo))));
         
-        const listHtml = matches.map(m => `
-            <div class="match-card" id="m${m.matchInfo.matchId}" onclick="loadMatch(${m.matchInfo.matchId})">
-                <b>${m.matchInfo.team1.teamName} vs ${m.matchInfo.team2.teamName}</b><br>
-                <small>${m.matchInfo.status}</small>
-            </div>
-        `).join('');
-        
-        document.getElementById("matchList").innerHTML = listHtml;
-        document.getElementById("syncStatus").style.color = "#10B981";
-        document.getElementById("syncStatus").innerText = "● Live Sync Active";
-
-        if(matches.length > 0) loadMatch(matches[0].matchInfo.matchId);
+        document.getElementById("matchButtons").innerHTML = matches.map(m => 
+            `<button class="match-btn" onclick="showScore(${m.matchId})">${m.team1.teamName} vs ${m.team2.teamName}</button>`
+        ).join('');
     } catch (e) {
-        document.getElementById("matchList").innerHTML = `<div style='color:#ef4444'>Connection Error</div>`;
-        document.getElementById("errorArea").innerHTML = `<div class="error-box"><b>Worker Error:</b> Ensure your Cloudflare Secret RAPIDAPI_KEY is set.</div>`;
+        document.getElementById("status").innerText = "Connection Error! Check Cloudflare logs.";
     }
 }
 
-async function loadMatch(id) {
-    document.querySelectorAll('.match-card').forEach(el => el.classList.remove('active'));
-    document.getElementById(`m${id}`)?.classList.add('active');
-
+async function showScore(id) {
+    document.getElementById("status").innerText = "Loading Scorecard...";
     try {
-        // MODULE 2: Scorecard (hscard)
-        const score = await api(`/mcenter/v1/${id}/hscard`);
-        
-        if (!score.scoreCard || score.scoreCard.length === 0) {
-            document.getElementById("matchTitle").innerText = "Match Pending Data";
-            document.getElementById("tablesArea").style.display = "none";
-            return;
-        }
+        const data = await api(`/mcenter/v1/${id}/hscard`);
+        document.getElementById("scorecardArea").style.display = "block";
+        document.getElementById("mName").innerText = data.matchHeader.matchDescription;
 
-        document.getElementById("tablesArea").style.display = "block";
-        document.getElementById("matchTitle").innerText = score.matchHeader.matchDescription;
-        document.getElementById("matchStatus").innerText = score.matchHeader.status;
+        // Force select the first available scorecard entry
+        const inn = data.scoreCard[0];
 
-        // UNIVERSAL LOGIC: Pull the most recent innings
-        const innIdx = score.scoreCard.length - 1;
-        const inn = score.scoreCard[innIdx];
-        document.getElementById("inningsLabel").innerText = `CURRENT INNINGS: ${innIdx + 1}`;
-
-        // BATTING
-        let batHtml = `<tr><th>Batsman</th><th>R</th><th>B</th><th>6s</th><th>SR</th></tr>`;
+        // Fill Batting
+        let bat = `<tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr>`;
         Object.values(inn.batTeamDetails.batsmenData).forEach(p => {
-            batHtml += `<tr><td>${p.batName}</td><td class="stat-hi">${p.runs}</td><td>${p.balls}</td><td>${p.sixes}</td><td>${p.strikeRate}</td></tr>`;
+            bat += `<tr><td>${p.batName}</td><td>${p.runs}</td><td>${p.balls}</td></tr>`;
         });
-        document.getElementById("batTable").innerHTML = batHtml;
+        document.getElementById("batTable").innerHTML = bat;
 
-        // BOWLING (Includes the Dots field you requested)
-        let bowlHtml = `<tr><th>Bowler</th><th>O</th><th>W</th><th>Dots</th><th>Econ</th></tr>`;
+        // Fill Bowling
+        let bowl = `<tr><th>Bowler</th><th>Overs</th><th>Wickets</th><th>Dots</th></tr>`;
         Object.values(inn.bowTeamDetails.bowlersData).forEach(b => {
-            bowlHtml += `<tr><td>${b.bowlerName}</td><td>${b.overs}</td><td class="stat-hi">${b.wickets}</td><td style="color:var(--gold)">${b.dots || 0}</td><td>${b.economy}</td></tr>`;
+            bowl += `<tr><td>${b.bowlerName}</td><td>${b.overs}</td><td>${b.wickets}</td><td>${b.dots || 0}</td></tr>`;
         });
-        document.getElementById("bowlTable").innerHTML = bowlHtml;
+        document.getElementById("bowlTable").innerHTML = bowl;
 
-    } catch (e) { console.error("Load Error:", e); }
+        document.getElementById("status").innerText = "Done.";
+    } catch (e) {
+        document.getElementById("status").innerText = "Scorecard Data Missing for this match.";
+    }
 }
 
-init();
+start();
 </script>
 </body>
 </html>
