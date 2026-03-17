@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>CricViz Style Cricket Dashboard</title>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-
 body{
 background:#0b0f18;
 color:#eaeaea;
@@ -15,60 +13,42 @@ font-family:system-ui;
 margin:0;
 padding:20px;
 }
-
-h1{
-color:#f4b942;
-}
-
+h1{color:#f4b942}
 .layout{
 display:grid;
 grid-template-columns:320px 1fr;
 gap:20px;
 }
-
 .panel{
 background:#121826;
 border-radius:10px;
 padding:15px;
 }
-
 .match{
 padding:12px;
 border-bottom:1px solid rgba(255,255,255,.08);
 cursor:pointer;
 }
-
-.match:hover{
-background:#1f2937;
-}
-
+.match:hover{background:#1f2937}
 table{
 width:100%;
 border-collapse:collapse;
 margin-top:15px;
 }
-
 th,td{
 padding:8px;
 border-bottom:1px solid rgba(255,255,255,.08);
 }
-
 th{
 color:#f4b942;
 font-size:12px;
 text-transform:uppercase;
 }
-
-.chart{
-margin-top:20px;
-}
-
 .phaseBox{
 display:flex;
 gap:10px;
 margin-top:20px;
 }
-
 .phase{
 background:#1f2937;
 padding:10px;
@@ -76,9 +56,8 @@ border-radius:6px;
 flex:1;
 text-align:center;
 }
-
+canvas{margin-top:20px}
 </style>
-
 </head>
 
 <body>
@@ -93,10 +72,9 @@ text-align:center;
 </div>
 
 <div class="panel">
-
 <div id="matchInfo">Select a match</div>
 
-<canvas id="runrateChart" class="chart"></canvas>
+<canvas id="runrateChart"></canvas>
 
 <div class="phaseBox">
 <div class="phase" id="powerplay">Powerplay</div>
@@ -105,7 +83,6 @@ text-align:center;
 </div>
 
 <div id="scorecard"></div>
-
 </div>
 
 </div>
@@ -115,25 +92,28 @@ text-align:center;
 const API_KEY="6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"
 const HOST="cricbuzz-cricket.p.rapidapi.com"
 
+/* CORS proxy */
+const PROXY="https://api.allorigins.win/raw?url="
+
 async function api(endpoint){
 
 try{
 
-const res = await fetch(
-"https://corsproxy.io/?https://"+HOST+endpoint,
-{
+const url = PROXY + encodeURIComponent("https://" + HOST + endpoint)
+
+const res = await fetch(url,{
 headers:{
 "x-rapidapi-key":API_KEY,
 "x-rapidapi-host":HOST
 }
-}
-)
+})
 
 return await res.json()
 
 }catch(e){
 
 alert("API connection failed")
+console.error(e)
 return null
 
 }
@@ -143,7 +123,6 @@ return null
 async function loadMatches(){
 
 const data=await api("/matches/v1/recent")
-
 if(!data) return
 
 let html=""
@@ -239,12 +218,10 @@ function renderRunRate(overs){
 
 if(!overs || !overs.overSummaryList) return
 
-const oversData=overs.overSummaryList
+const runs=[]
+const labels=[]
 
-let runs=[]
-let labels=[]
-
-oversData.forEach(o=>{
+overs.overSummaryList.forEach(o=>{
 runs.push(o.runs)
 labels.push("Over "+o.overNum)
 })
@@ -277,7 +254,7 @@ function renderPhases(overs){
 
 if(!overs || !overs.overSummaryList) return
 
-let pp=0, mid=0, death=0
+let pp=0,mid=0,death=0
 
 overs.overSummaryList.forEach(o=>{
 
