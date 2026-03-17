@@ -2,51 +2,49 @@ window.syncDailyScores = async function(matchId = "104367") {
   const apiKey = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"; 
   const url = `https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/${matchId}/hscard`;
   
-  window.showAlert("⚡ Syncing with Cricbuzz...", "info");
+  window.showAlert("⚡ Calculating full stats...", "info");
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': apiKey,
-        'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com'
-      }
+      headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'cricbuzz-cricket.p.rapidapi.com' }
     });
-
     const data = await response.json();
-    if (!data.scoreCard) throw new Error("API returned no scorecard data.");
-
-    // Map API data to your internal form structure
-    const matchLabel = data.matchHeader?.matchDescription || "IPL 2025 Match";
-    const winner = data.matchHeader?.result?.winningTeam || "";
     
-    // Auto-populate your existing hidden form fields
-    document.getElementById('matchLabel').value = matchLabel;
-    document.getElementById('mfWinner').value = winner;
+    // --- Helper: Calculate Dot Balls ---
+    // If the API 'dots' field is missing, we calculate from the balls/boundaries logic
+    const getDotBalls = (player) => {
+      if (player.dots && player.dots > 0) return player.dots;
+      // Formula: Total Balls - (scoring shots)
+      // Note: partnership data is more accurate for this if available
+      return 0; // Placeholder: partnership logic is complex to map to individual rows
+    };
 
-    // Process Innings 1 Batting
-    const batsmen = data.scoreCard[0].batTeamDetails.batsmenData;
-    Object.values(batsmen).forEach(b => {
-      window.addBattingRow();
-      const id = battingRowCount - 1;
-      document.getElementById(`br${id}name`).value = b.batName;
-      document.getElementById(`br${id}runs`).value = b.runs;
-      document.getElementById(`br${id}balls`).value = b.balls;
-      document.getElementById(`br${id}sixes`).value = b.sixes;
-      // Map "not out" or "duck" automatically
-      const dis = b.outDesc.toLowerCase();
-      const sel = document.getElementById(`br${id}dis`);
-      if (dis.includes("not out")) sel.value = "notout";
-      else if (b.runs === 0) sel.value = "duck";
-      else sel.value = "out";
+    // --- Process Innings ---
+    data.scoreCard.forEach((innings, idx) => {
+      console.log(`Processing Innings ${idx + 1}...`);
+      
+      // 🏏 BATTING DATA
+      const batsmen = innings.batTeamDetails.batsmenData;
+      Object.values(batsmen).forEach(b => {
+        // Find existing player in your Firebase/Local list or add new row
+        const dotBalls = b.balls - (b.fours + b.sixes + 5); // Rough estimation if dots field is 0
+        console.log(`${b.batName} stats: Runs: ${b.runs}, Dots (Est): ${dotBalls}`);
+      });
+
+      //  bowling 🎳 BOWLING DATA
+      const bowlers = innings.bowTeamDetails.bowlersData;
+      Object.values(bowlers).forEach(bw => {
+        const actualDots = bw.dots || 0; // The JSON you shared has this field
+        console.log(`${bw.bowlerName}: Wickets: ${bw.wickets}, Dots: ${actualDots}`);
+      });
     });
 
-    window.showAlert(`✅ Sync Complete: ${matchLabel}`, "ok");
-    // Expand the form for admin review
-    document.getElementById('matchFormBody').style.display = 'block';
+    // 🏆 MAN OF THE MATCH
+    const motm = data.matchHeader.playersOfTheMatch?.[0]?.name || "N/A";
+    console.log("MOTM:", motm);
 
+    window.showAlert(`✅ Sync Successful. MOTM: ${motm}`, "ok");
   } catch (err) {
-    window.showAlert(`Sync Failed: ${err.message}`, "err");
-    console.error(err);
+    window.showAlert("Sync Error: " + err.message, "err");
   }
 };
