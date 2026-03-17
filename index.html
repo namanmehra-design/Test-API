@@ -1,105 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Cricbuzz Dashboard</title>
-
-<style>
-
-body{
-background:#0a0f1a;
-color:white;
-font-family:system-ui;
-margin:0;
-padding:20px;
-}
-
-h1{
-color:#f4b942;
-}
-
-.layout{
-display:grid;
-grid-template-columns:350px 1fr;
-gap:20px;
-}
-
-.panel{
-background:#111827;
-border-radius:10px;
-padding:15px;
-}
-
-.match{
-padding:12px;
-border-bottom:1px solid rgba(255,255,255,.08);
-cursor:pointer;
-}
-
-.match:hover{
-background:#1f2937;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-
-th,td{
-padding:8px;
-border-bottom:1px solid rgba(255,255,255,.08);
-}
-
-th{
-color:#f4b942;
-font-size:12px;
-text-transform:uppercase;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h1>🏏 Cricbuzz Match Dashboard</h1>
-
-<div class="layout">
-
-<div class="panel">
-<h3>Matches</h3>
-<div id="matches">Loading matches...</div>
-</div>
-
-<div class="panel">
-<div id="matchHeader">Select a match</div>
-<div id="scorecard"></div>
-</div>
-
-</div>
-
 <script>
 
-const API_KEY="6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"
-const HOST="cricbuzz-cricket.p.rapidapi.com"
+const API_KEY = "6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"
+const HOST = "cricbuzz-cricket.p.rapidapi.com"
 
 async function api(endpoint){
 
-const r=await fetch(`https://${HOST}${endpoint}`,{
+const url = "https://corsproxy.io/?https://" + HOST + endpoint
+
+const res = await fetch(url,{
 headers:{
 "x-rapidapi-key":API_KEY,
 "x-rapidapi-host":HOST
 }
 })
 
-return await r.json()
+return await res.json()
 
 }
 
 async function loadMatches(){
 
-const data=await api("/matches/v1/recent")
+const data = await api("/matches/v1/recent")
 
 let html=""
 
@@ -110,9 +31,9 @@ if(!s.seriesAdWrapper) return
 
 s.seriesAdWrapper.matches.forEach(m=>{
 
-const info=m.matchInfo
+const info = m.matchInfo
 
-html+=`
+html += `
 <div class="match" onclick="loadScorecard(${info.matchId})">
 <b>${info.team1.teamName} vs ${info.team2.teamName}</b><br>
 ${info.status}
@@ -122,32 +43,33 @@ ${info.status}
 })
 
 })
-
 })
 
-document.getElementById("matches").innerHTML=html
+document.getElementById("matches").innerHTML = html
 
 }
 
 async function loadScorecard(matchId){
 
-document.getElementById("matchHeader").innerHTML="Loading..."
+document.getElementById("matchHeader").innerHTML = "Loading..."
 
-const data=await api(`/mcenter/v1/${matchId}/hscard`)
+try{
 
-const header=data.matchHeader
+const data = await api("/mcenter/v1/"+matchId+"/hscard")
 
-let html=`<h2>${header.matchDescription}</h2>`
-html+=`<p>${header.status}</p>`
+const header = data.matchHeader
+
+let html = `<h2>${header.matchDescription}</h2>`
+html += `<p>${header.status}</p>`
 
 data.scoreCard.forEach(sc=>{
 
-const team=sc.batTeamDetails.batTeamName
-const score=`${sc.scoreDetails.runs}/${sc.scoreDetails.wickets} (${sc.scoreDetails.overs})`
+const team = sc.batTeamDetails.batTeamName
+const score = `${sc.scoreDetails.runs}/${sc.scoreDetails.wickets} (${sc.scoreDetails.overs})`
 
-html+=`<h3>${team} — ${score}</h3>`
+html += `<h3>${team} — ${score}</h3>`
 
-html+=`
+html += `
 <table>
 <tr>
 <th>Batter</th>
@@ -161,7 +83,7 @@ html+=`
 
 Object.values(sc.batTeamDetails.batsmenData).forEach(b=>{
 
-html+=`
+html += `
 <tr>
 <td>${b.batName}</td>
 <td>${b.runs}</td>
@@ -174,46 +96,20 @@ html+=`
 
 })
 
-html+=`</table>`
-
-html+=`
-<table>
-<tr>
-<th>Bowler</th>
-<th>Overs</th>
-<th>Runs</th>
-<th>Wickets</th>
-<th>Dots</th>
-<th>Econ</th>
-</tr>
-`
-
-Object.values(sc.bowTeamDetails.bowlersData).forEach(b=>{
-
-html+=`
-<tr>
-<td>${b.bowlerName}</td>
-<td>${b.overs}</td>
-<td>${b.runs}</td>
-<td>${b.wickets}</td>
-<td>${b.dots || 0}</td>
-<td>${b.economy}</td>
-</tr>
-`
+html += `</table>`
 
 })
 
-html+=`</table>`
+document.getElementById("scorecard").innerHTML = html
 
-})
+}catch(e){
 
-document.getElementById("scorecard").innerHTML=html
+document.getElementById("matchHeader").innerHTML="Scorecard unavailable"
+
+}
 
 }
 
 loadMatches()
 
 </script>
-
-</body>
-</html>
