@@ -1,212 +1,277 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
-<title>🏏 Cricket Analytics Dashboard</title>
+<title>Cricbuzz Match Dashboard</title>
 
 <style>
 
 body{
+background:#0b0f18;
+color:#f4f1ea;
 font-family:system-ui;
-background:#050913;
-color:white;
-padding:30px
+margin:0;
+padding:20px;
 }
 
-h1{font-size:40px}
+h1{
+color:#d4a847;
+margin-bottom:20px;
+}
+
+.container{
+display:grid;
+grid-template-columns:320px 1fr;
+gap:20px;
+}
 
 .panel{
-background:#0e1624;
-padding:20px;
-border-radius:12px;
-margin-bottom:20px
+background:#111827;
+border-radius:10px;
+padding:15px;
 }
 
-button{
-padding:10px 14px;
-border:none;
-border-radius:8px;
-cursor:pointer
+.match{
+padding:10px;
+border-bottom:1px solid rgba(255,255,255,.08);
+cursor:pointer;
 }
 
-.primary{background:#d4a847;color:black}
+.match:hover{
+background:#1f2937;
+}
 
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:10px
+margin-top:10px;
 }
 
 th,td{
 padding:8px;
-border-bottom:1px solid #1e293b
+border-bottom:1px solid rgba(255,255,255,.08);
+font-size:14px;
 }
 
-th{color:#d4a847}
-
-.card{
-background:#111827;
-padding:10px;
-border-radius:8px
+th{
+color:#d4a847;
+text-align:left;
+font-size:12px;
+text-transform:uppercase;
 }
 
-.grid{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:10px
+.score{
+font-size:20px;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.status{
+margin-bottom:10px;
+color:#9ca3af;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<h1>🏏 Cricket Analytics Dashboard</h1>
+<h1>🏏 Cricbuzz Match Dashboard</h1>
+
+<div class="container">
 
 <div class="panel">
 
-<select id="feed">
+<div class="status" id="status">Loading matches...</div>
 
-<option value="recent">Recent</option>
-<option value="live">Live</option>
-<option value="upcoming">Upcoming</option>
-
-</select>
-
-<button class="primary" onclick="loadMatches()">Load Matches</button>
-
-<select id="matchSelector"></select>
+<div id="matchList"></div>
 
 </div>
 
-<div id="summary" class="panel grid"></div>
+<div class="panel">
 
-<div id="scorecard" class="panel"></div>
+<div id="matchInfo"></div>
 
-<div id="overs" class="panel"></div>
+<div id="scorecard"></div>
 
-<pre id="json"></pre>
+</div>
+
+</div>
+
 
 <script>
 
-const API="https://YOUR-WORKER-URL.workers.dev/api"
+const API_KEY="6d53928bfdmsh545332aded830a3p11bdaajsncf079fc57095"
+const HOST="cricbuzz-cricket.p.rapidapi.com"
 
-let currentMatch=null
+async function api(url){
+
+const res=await fetch("https://"+HOST+url,{
+headers:{
+"x-rapidapi-key":API_KEY,
+"x-rapidapi-host":HOST
+}
+})
+
+return await res.json()
+
+}
+
 
 async function loadMatches(){
 
-const res=await fetch(API+"/matches/v1/"+feed.value)
+const data=await api("/matches/v1/recent")
 
-const data=await res.json()
-
-const matches=[]
+let matches=[]
 
 data.typeMatches.forEach(t=>{
 t.seriesMatches.forEach(s=>{
-s.seriesAdWrapper.matches.forEach(m=>{
+(s.seriesAdWrapper.matches||[]).forEach(m=>{
 matches.push(m.matchInfo)
 })
 })
 })
 
-matchSelector.innerHTML=""
+renderMatches(matches)
+
+}
+
+
+function renderMatches(matches){
+
+const list=document.getElementById("matchList")
+list.innerHTML=""
 
 matches.forEach(m=>{
 
-const opt=document.createElement("option")
+const div=document.createElement("div")
 
-opt.value=m.matchId
-opt.text=m.team1.teamName+" vs "+m.team2.teamName
+div.className="match"
 
-matchSelector.appendChild(opt)
+const t1=m.team1.teamName
+const t2=m.team2.teamName
+
+div.innerHTML=`<b>${t1} vs ${t2}</b><br>${m.status}`
+
+div.onclick=()=>loadMatch(m.matchId)
+
+list.appendChild(div)
 
 })
 
+document.getElementById("status").innerText="Click a match"
+
 }
 
-matchSelector.onchange=()=>loadMatch(matchSelector.value)
 
 async function loadMatch(id){
 
-const data=await fetch(API+"/mcenter/v1/"+id+"/hscard")
-.then(r=>r.json())
+document.getElementById("status").innerText="Loading match..."
 
-currentMatch=data
+const data=await api("/mcenter/v1/"+id+"/hscard")
 
-renderSummary()
-renderScorecard()
-
-json.textContent=JSON.stringify(data,null,2)
+renderScorecard(data)
 
 }
 
-function renderSummary(){
 
-const h=currentMatch.matchHeader
+function renderScorecard(data){
 
-summary.innerHTML=`
+const header=data.matchHeader
 
-<div class="card">Status<br><b>${h.status}</b></div>
+const scorecards=data.scoreCard
 
-<div class="card">Fixture<br><b>${h.matchDescription}</b></div>
+let html=""
 
-<div class="card">Venue<br><b>${h.venue.name}</b></div>
-
-<div class="card">Series<br><b>${h.seriesName}</b></div>
-
+html+=`
+<div class="score">
+${header.matchDescription}
+</div>
+<div class="status">
+${header.status}
+</div>
 `
 
-}
+scorecards.forEach(sc=>{
 
-function renderScorecard(){
+const team=sc.batTeamDetails.batTeamName
+const score=sc.scoreDetails.runs+"/"+sc.scoreDetails.wickets+" ("+sc.scoreDetails.overs+" ov)"
 
-const sc=currentMatch.scoreCard
+html+=`<h2>${team} — ${score}</h2>`
 
-scorecard.innerHTML=sc.map(i=>{
+const bats=Object.values(sc.batTeamDetails.batsmenData)
 
-const bats=Object.values(i.batTeamDetails.batsmenData)
-
-return`
-
-<h3>${i.batTeamDetails.batTeamName}</h3>
-
+html+=`
 <table>
-
 <tr>
-
-<th>Player</th>
+<th>Batter</th>
 <th>Runs</th>
 <th>Balls</th>
-<th>4</th>
-<th>6</th>
+<th>4s</th>
+<th>6s</th>
 <th>SR</th>
-
 </tr>
+`
 
-${bats.map(b=>`
+bats.forEach(b=>{
 
+html+=`
 <tr>
-
 <td>${b.batName}</td>
 <td>${b.runs}</td>
 <td>${b.balls}</td>
 <td>${b.fours}</td>
 <td>${b.sixes}</td>
 <td>${b.strikeRate}</td>
-
 </tr>
-
-`).join("")}
-
-</table>
-
 `
 
-}).join("")
+})
+
+html+=`</table>`
+
+
+const bowls=Object.values(sc.bowTeamDetails.bowlersData)
+
+html+=`
+<table>
+<tr>
+<th>Bowler</th>
+<th>Overs</th>
+<th>Runs</th>
+<th>Wickets</th>
+<th>Dots</th>
+<th>Econ</th>
+</tr>
+`
+
+bowls.forEach(b=>{
+
+html+=`
+<tr>
+<td>${b.bowlerName}</td>
+<td>${b.overs}</td>
+<td>${b.runs}</td>
+<td>${b.wickets}</td>
+<td>${b.dots || 0}</td>
+<td>${b.economy}</td>
+</tr>
+`
+
+})
+
+html+=`</table>`
+
+})
+
+document.getElementById("scorecard").innerHTML=html
+
+document.getElementById("status").innerText="Match loaded"
 
 }
+
+
+loadMatches()
 
 </script>
 
