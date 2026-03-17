@@ -1,50 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
+<title>CricViz Analytics Dashboard</title>
 
-<title>🏏 CricViz Analytics Dashboard</title>
-
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 
 <style>
 
 body{
-margin:0;
-background:#0b1220;
-color:white;
 font-family:system-ui;
+margin:0;
+background:#0b1423;
+color:white;
 }
 
 header{
 padding:20px;
-font-size:26px;
-font-weight:bold;
-color:#ffc857;
-border-bottom:1px solid #222;
+font-size:24px;
+font-weight:600;
+border-bottom:1px solid #1f2a44;
 }
 
 .container{
 display:flex;
-height:92vh;
+height:calc(100vh - 70px);
 }
 
 .sidebar{
 width:320px;
-background:#111a2e;
-padding:20px;
-overflow-y:auto;
+background:#0f1b2f;
+overflow:auto;
+border-right:1px solid #1f2a44;
 }
 
 .match{
-padding:12px;
-border-radius:10px;
-margin-bottom:12px;
-background:#1b2644;
+padding:14px;
+border-bottom:1px solid #1c2740;
 cursor:pointer;
 }
 
 .match:hover{
-background:#2c3c66;
+background:#182746;
 }
 
 .main{
@@ -53,199 +50,166 @@ padding:25px;
 overflow:auto;
 }
 
-.section{
-margin-bottom:40px;
+.tabs{
+margin-bottom:20px;
 }
 
-.tables{
-display:flex;
-gap:40px;
+button{
+margin-right:8px;
+padding:8px 14px;
+background:#1b2a4a;
+color:white;
+border:none;
+border-radius:6px;
+cursor:pointer;
+}
+
+button:hover{
+background:#294072;
 }
 
 table{
-border-collapse:collapse;
 width:100%;
+border-collapse:collapse;
+margin-top:15px;
 }
 
-td,th{
-padding:6px;
-border-bottom:1px solid #2a3554;
-font-size:14px;
+th,td{
+padding:8px;
+border-bottom:1px solid #1f2a44;
 }
 
-th{
-color:#ffc857;
-}
-
-.phase{
-display:flex;
-gap:20px;
-}
-
-.phaseBox{
-flex:1;
-background:#1b2644;
-padding:20px;
-border-radius:10px;
-text-align:center;
-font-size:18px;
-}
-
-.chart{
-height:320px;
+.section{
+margin-top:30px;
 }
 
 </style>
-
 </head>
 
 <body>
 
-<header>🏏 CricViz Analytics Dashboard</header>
+<header>
+🏏 CricViz Analytics Dashboard
+</header>
 
 <div class="container">
 
-<div class="sidebar" id="matches">
-Loading matches...
+<div class="sidebar">
+<div class="tabs">
+<button onclick="loadMatches('live')">Live</button>
+<button onclick="loadMatches('upcoming')">Upcoming</button>
+<button onclick="loadMatches('recent')">Recent</button>
+</div>
+
+<div id="matches"></div>
 </div>
 
 <div class="main">
 
-<h2 id="matchTitle"></h2>
+<h2 id="matchTitle">Select a match</h2>
 
-<div class="section tables">
-
-<div>
+<div class="section">
 <h3>Batting</h3>
 <table id="batTable"></table>
 </div>
 
-<div>
+<div class="section">
 <h3>Bowling</h3>
 <table id="bowlTable"></table>
 </div>
 
-</div>
-
 <div class="section">
-
 <h3>Run Progression</h3>
-<div id="worm" class="chart"></div>
-
-</div>
-
-<div class="section">
-
-<h3>Fantasy Points</h3>
-<table id="fantasyTable"></table>
-
-</div>
-
-<div class="section">
-
-<h3>Phase Scoring</h3>
-
-<div class="phase">
-
-<div class="phaseBox" id="power"></div>
-<div class="phaseBox" id="middle"></div>
-<div class="phaseBox" id="death"></div>
-
+<div id="wormChart"></div>
 </div>
 
 </div>
-
-</div>
-
 </div>
 
 <script>
 
+/* API HELPER */
+
 const API="https://cricbuzz.namanmehra.workers.dev"
 
 async function api(endpoint){
-
-const r=await fetch(`${API}?endpoint=${endpoint}`)
-
-return await r.json()
-
+const res=await fetch(`${API}?endpoint=${encodeURIComponent(endpoint)}`)
+return await res.json()
 }
 
-async function loadMatches(){
 
-const data=await api("/matches/v1/live")
+/* LOAD MATCHES */
 
-const matches=[]
+async function loadMatches(type){
 
-data.typeMatches.forEach(type=>{
-
-type.seriesMatches.forEach(series=>{
-
-if(series.seriesAdWrapper){
-
-series.seriesAdWrapper.matches.forEach(m=>{
-
-matches.push(m)
-
-})
-
-}
-
-})
-
-})
-
-renderMatches(matches)
-
-}
-
-function renderMatches(matches){
+const data=await api(`/matches/v1/${type}`)
 
 const container=document.getElementById("matches")
-
 container.innerHTML=""
 
-matches.forEach(m=>{
+data.typeMatches.forEach(type=>{
+type.seriesMatches.forEach(series=>{
 
-const div=document.createElement("div")
+if(series.seriesAdWrapper && series.seriesAdWrapper.matches){
 
-div.className="match"
+series.seriesAdWrapper.matches.forEach(match=>{
 
-div.innerHTML=`
-<b>${m.matchInfo.team1.teamName}</b><br>
-vs<br>
-<b>${m.matchInfo.team2.teamName}</b><br>
-<small>${m.matchInfo.status}</small>
+const info=match.matchInfo
+
+const card=document.createElement("div")
+card.className="match"
+
+card.innerHTML=`
+<b>${info.team1.teamName} vs ${info.team2.teamName}</b><br>
+${info.status}
 `
 
-div.onclick=()=>loadMatch(m.matchInfo.matchId)
+card.onclick=()=>loadMatch(info.matchId)
 
-container.appendChild(div)
+container.appendChild(card)
 
 })
 
 }
+
+})
+})
+
+}
+
+
+/* LOAD MATCH */
 
 async function loadMatch(matchId){
 
-const data=await api(`/mcenter/v1/${matchId}/hscard`)
+const header=await api(`/mcenter/v1/${matchId}`)
+const score=await api(`/mcenter/v1/${matchId}/hscard`)
+const overs=await api(`/mcenter/v1/${matchId}/overs`)
 
-const header=data.matchHeader
-
-document.getElementById("matchTitle").innerText=
-`${header.team1.name} vs ${header.team2.name}`
-
-renderBatting(data)
-
-renderBowling(data)
-
-renderFantasy(data)
-
-renderWorm(data)
-
-renderPhase(data)
+renderHeader(header)
+renderBatting(score)
+renderBowling(score)
+renderOvers(overs)
 
 }
+
+
+/* HEADER */
+
+function renderHeader(data){
+
+const title=document.getElementById("matchTitle")
+
+title.innerHTML=`
+${data.matchHeader.team1.name} vs ${data.matchHeader.team2.name}
+<br>
+<small>${data.matchHeader.status}</small>
+`
+
+}
+
+
+/* BATTING */
 
 function renderBatting(data){
 
@@ -253,8 +217,7 @@ const table=document.getElementById("batTable")
 
 table.innerHTML="<tr><th>Player</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th></tr>"
 
-Object.values(data.scoreCard[0].batTeamDetails.batsmenData)
-.forEach(b=>{
+Object.values(data.scoreCard[0].batTeamDetails.batsmenData).forEach(b=>{
 
 table.innerHTML+=`
 <tr>
@@ -270,22 +233,23 @@ table.innerHTML+=`
 
 }
 
+
+/* BOWLING */
+
 function renderBowling(data){
 
 const table=document.getElementById("bowlTable")
 
-table.innerHTML="<tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wkts</th><th>Dots</th></tr>"
+table.innerHTML="<tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th></tr>"
 
-Object.values(data.scoreCard[0].bowTeamDetails.bowlersData)
-.forEach(b=>{
+Object.values(data.scoreCard[0].bowlTeamDetails.bowlersData).forEach(b=>{
 
 table.innerHTML+=`
 <tr>
-<td>${b.bowlerName}</td>
+<td>${b.bowlName}</td>
 <td>${b.overs}</td>
 <td>${b.runs}</td>
 <td>${b.wickets}</td>
-<td>${b.dots || 0}</td>
 </tr>
 `
 
@@ -293,82 +257,33 @@ table.innerHTML+=`
 
 }
 
-function renderFantasy(data){
 
-const table=document.getElementById("fantasyTable")
+/* OVERS PROGRESSION */
 
-table.innerHTML="<tr><th>Player</th><th>Fantasy Points</th></tr>"
+function renderOvers(data){
 
-Object.values(data.scoreCard[0].batTeamDetails.batsmenData)
-.forEach(b=>{
+if(!data.overSummary) return
 
-let pts=0
+let runs=[]
+let total=0
 
-pts+=b.runs
-pts+=b.fours*1
-pts+=b.sixes*2
-
-if(b.runs>=50) pts+=8
-if(b.runs>=100) pts+=16
-
-table.innerHTML+=`
-<tr>
-<td>${b.batName}</td>
-<td>${pts}</td>
-</tr>
-`
-
+data.overSummary.forEach(o=>{
+total+=o.runs
+runs.push(total)
 })
 
-}
-
-function renderWorm(data){
-
-const runs=data.scoreCard.map(i=>i.scoreDetails.runs)
-
-Plotly.newPlot("worm",[{
+Plotly.newPlot("wormChart",[{
 y:runs,
-type:"scatter",
-mode:"lines+markers",
-line:{color:"#ffc857"}
-}],
-{
-paper_bgcolor:"#0b1220",
-plot_bgcolor:"#0b1220",
-font:{color:"white"}
-})
+mode:"lines",
+type:"scatter"
+}])
 
 }
 
-function renderPhase(data){
 
-let power=0
-let middle=0
-let death=0
+/* INITIAL LOAD */
 
-data.scoreCard.forEach(i=>{
-
-const r=i.scoreDetails.runs
-const o=i.scoreDetails.overs
-
-if(o<=6) power+=r
-else if(o<=15) middle+=r
-else death+=r
-
-})
-
-document.getElementById("power").innerHTML=
-`Powerplay<br><b>${power}</b>`
-
-document.getElementById("middle").innerHTML=
-`Middle Overs<br><b>${middle}</b>`
-
-document.getElementById("death").innerHTML=
-`Death Overs<br><b>${death}</b>`
-
-}
-
-loadMatches()
+loadMatches("live")
 
 </script>
 
